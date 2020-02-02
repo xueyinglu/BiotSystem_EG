@@ -1,0 +1,870 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 10861f2..159e815 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -3,7 +3,7 @@
+ ##
+ 
+ # Set the name of the project and target:
+-SET(TARGET "BiotSystem")
++SET(TARGET "BiotSystem_EG")
+ 
+ # Declare all source files the target consists of:
+ FILE(GLOB_RECURSE TARGET_SRC "source/*.cc")
+diff --git a/include/AuxTools.h b/include/AuxTools.h
+index e3becc5..a8e3a3e 100644
+--- a/include/AuxTools.h
++++ b/include/AuxTools.h
+@@ -5,6 +5,30 @@
+ using namespace std;
+ using namespace dealii;
+ 
++template <class PreconditionerA, class PreconditionerC>
++class BlockDiagonalPreconditioner
++{
++public:
++    BlockDiagonalPreconditioner(const LA::MPI::BlockSparseMatrix &M,
++                                const PreconditionerA &pre_A, const PreconditionerC &pre_C)
++        : matrix(M),
++          prec_A(pre_A),
++          prec_C(pre_C)
++    {
++    }
++
++    void vmult(LA::MPI::BlockVector &dst,
++               const LA::MPI::BlockVector &src) const
++    {
++        prec_A.vmult(dst.block(0), src.block(0));
++        prec_C.vmult(dst.block(1), src.block(1));
++    }
++
++    const LA::MPI::BlockSparseMatrix &matrix;
++    const PreconditionerA &prec_A;
++    const PreconditionerC &prec_C;
++};
++
+ // Define some tensors for cleaner notation later.
+ namespace Tensors
+ {
+diff --git a/include/BiotSystem.h b/include/BiotSystem.h
+index 7e75954..8b08647 100644
+--- a/include/BiotSystem.h
++++ b/include/BiotSystem.h
+@@ -3,45 +3,54 @@
+ #include "DealiiHeader.h"
+ #include "InitialPressure.h"
+ #include "RightHandSide.h"
++namespace LA
++{
++using namespace dealii::LinearAlgebraTrilinos;
++}
+ using namespace dealii;
+ using namespace std;
+ class BiotSystem
+ {
++    /* Biot system with EG for flow and CG for mechanics*/
+ public:
+     BiotSystem();
+     BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol);
+     BiotSystem(string testcase, int _num_global_refinement, double _del_t, double _T);
+-    BiotSystem(bool _bEG, int _num_global_refinement, double _del_t, double _T);
+     // virtual BiotSystem();
+     void run_fixed_stress();
+     void check_disp_solver_convergence();
+ 
+-    enum TestCase{
+-        none, 
++    enum TestCase
++    {
++        none,
+         simple,
+         mandel
+     };
+ 
+-
+ private:
+     double del_t = 0.01;
+     double T = 1;
+     double t = 0;
+     int timestep = 0;
+     int num_global_refinement = 5;
+-    double h = 1./pow(2,num_global_refinement);
++    double h = 1. / pow(2, num_global_refinement);
+ 
+     Triangulation<dim> triangulation;
+-    // pressure solution
++    /* EG pressure solution */
+     FESystem<dim> fe_pressure;
+-    ConstraintMatrix constraints_pressure;
++
+     DoFHandler<dim> dof_handler_pressure;
+-    SparsityPattern sparse_pattern_pressure;
+-    SparseMatrix<double> system_matrix_pressure;
++    BlockSparsityPattern sparsity_pattern_pressure;
++    ConstraintMatrix constraints_pressure;
+ 
+-    bool bEG;
+-    Vector<double> solution_pressure;
+-    Vector<double> system_rhs_pressure;
++    LA::MPI::BlockSparseMatrix system_matrix_pressure;
++    LA::MPI::BlockVector solution_pressure, prev_timestep_sol_pressure, prev_fs_sol_pressure;
++    LA::MPI::BlockVector system_rhs_pressure;
++    std::vector<IndexSet> partition_pressure;
++    std::vector<IndexSet> partition_relevant_pressure;
++    IndexSet relevant_set_pressure;
++    LA::MPI::PreconditionAMG preconditioner_pressure_cg;
++    LA::MPI::PreconditionAMG preconditioner_pressure_dg;
+ 
+     // displacement solution
+     FESystem<dim> fe_displacement;
+@@ -60,7 +69,7 @@ private:
+     vector<double> energy_error_u;
+ 
+     // Data
+-    double mu_f = 1; // fluid viscosity
++    double mu_f = 1;               // fluid viscosity
+     RightHandSide right_hand_side; // mechanics equation body force
+     InitialPressure initial_pressure;
+     ConstantFunction<dim> permeability;
+@@ -70,14 +79,20 @@ private:
+     // coupling
+ 
+     double biot_alpha = 0.75;
+-    double K_b = 7./12; //K_b = lambda +2/3*mu
+-    double biot_inv_M = 3./28;
++    double K_b = 7. / 12; //K_b = lambda +2/3*mu
++    double biot_inv_M = 3. / 28;
+     double tol_fixed_stress = 1e-5;
+-    Vector<double> prev_timestep_sol_pressure;
+     Vector<double> prev_timestep_sol_displacement;
+-    Vector<double> prev_fs_sol_pressure;
+     Vector<double> prev_fs_sol_displacement;
+ 
++    // EG for flow
++    int degree = 1;
++    double gamma_penal;
++    double min_cell_diameter;
++    bool bNeaumannBD = false;
++    bool bCG_WeaklyBD = true;
++    double d_SForm = 0; //SIPG
++
+     /* element-wise a posteriori error indicators*/
+     DoFHandler<dim> dof_handler_output;
+     FESystem<dim> fe_output;
+@@ -90,29 +105,32 @@ private:
+     vector<double> eta_alg;
+     vector<double> eta_time;
+     vector<double> eta_p_residual; // error of flow residual at time t_n
+-    vector<double> eta_flux_jump; // error of flux jump at time t_n
++    vector<double> eta_flux_jump;  // error of flux jump at time t_n
+     vector<double> eta_flow;
+ 
+     vector<double> eta_face_partial_sigma_n; // the errors on the tensor's time derivative for time step n
+-    vector<double> eta_face_partial_sigma; // the (cumulative in time ) errors on the tensor's time derivative_form
+-    vector<double> eta_partial_u_n; // the errors on the displacement's time derivative for time step n
+-    vector<double> eta_partial_u; // the (cumulative in time) errors on the displacement's time derivative
+-    vector<double> eta_face_sigma_n; //the errors on the tensor at time t_n;
+-    vector<double> eta_face_sigma; //the errors on the tensor at final time
+-    vector<double> eta_u_n; // the errors on the displacement at time t_n; 
+-    vector<double> eta_u; // the errors on the displacement at final time
+-    vector<double> eta_sum; // the sum of all error indicators
++    vector<double> eta_face_partial_sigma;   // the (cumulative in time ) errors on the tensor's time derivative_form
++    vector<double> eta_partial_u_n;          // the errors on the displacement's time derivative for time step n
++    vector<double> eta_partial_u;            // the (cumulative in time) errors on the displacement's time derivative
++    vector<double> eta_face_sigma_n;         //the errors on the tensor at time t_n;
++    vector<double> eta_face_sigma;           //the errors on the tensor at final time
++    vector<double> eta_u_n;                  // the errors on the displacement at time t_n;
++    vector<double> eta_u;                    // the errors on the displacement at final time
++    vector<double> eta_sum;                  // the sum of all error indicators
+     ConvergenceTable p_indicators_table;
+     ConvergenceTable u_indicators_table;
+     ConvergenceTable efficiency_table;
+ 
+     void make_grid();
+-    void setup_system();
++    // void setup_system();
++    void setup_system_eg();
+ 
+-    void assemble_system_pressure();
++    // void assemble_system_pressure();
++    void assemble_system_pressure_eg();
+     void assemble_system_displacement();
+ 
+-    void solve_pressure();
++    void set_newton_bc_pressure();
++    void solve_pressure_eg();
+     void solve_displacement();
+ 
+     void fixed_stress_iteration();
+@@ -124,7 +142,7 @@ private:
+     void output_error();
+     void calc_error(); // compute the errors
+     //void process_solution(int fs_count); // compute the errors
+-    void plot_error() const;
++    //  void plot_error() const;
+ 
+     void calc_a_posteriori_indicators_p();
+     void calc_a_posteriori_indicators_u();
+@@ -132,6 +150,7 @@ private:
+     double calc_u_energy_norm();
+     void calc_efficiency_indices();
+ 
++    MPI_Comm mpi_com;
+ };
+ 
+ #endif
+\ No newline at end of file
+diff --git a/source/BiotSystem.cc b/source/BiotSystem.cc
+index 105d5a4..ea27617 100644
+--- a/source/BiotSystem.cc
++++ b/source/BiotSystem.cc
+@@ -11,15 +11,17 @@ BiotSystem::BiotSystem() : fe_pressure(FE_Q<dim>(1), 1),
+ {
+     test_case = simple;
+ }
+-BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol) : fe_pressure(FE_Q<dim>(1), 1),
+-                                                                               dof_handler_pressure(triangulation),
+-                                                                               fe_displacement(FE_Q<dim>(1), dim),
+-                                                                               dof_handler_displacement(triangulation),
+-                                                                               permeability(0.05),
+-                                                                               lambda(0.5),
+-                                                                               mu(0.125),
+-                                                                               dof_handler_output(triangulation),
+-                                                                               fe_output(FE_DGQ<dim>(0), 1)
++BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol) : fe_pressure(FE_Q<dim>(1), 1,
++                                                                                                FE_DGQ<dim>(0),1),
++                                                                                               dof_handler_pressure(triangulation),
++                                                                                               fe_displacement(FE_Q<dim>(1), dim),
++                                                                                               dof_handler_displacement(triangulation),
++                                                                                               permeability(0.05),
++                                                                                               lambda(0.5),
++                                                                                               mu(0.125),
++                                                                                               dof_handler_output(triangulation),
++                                                                                               fe_output(FE_DGQ<dim>(0), 1),
++                                                                                               mpi_com(MPI_COMM_WORLD)
+ {
+     num_global_refinement = _num_global_refinement;
+     del_t = _del_t;
+@@ -27,9 +29,12 @@ BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, dou
+     h = 1. / std::pow(2, num_global_refinement);
+     test_case = simple;
+     tol_fixed_stress = _fs_tol;
++    min_cell_diameter = h;
++    gamma_penal = 100;
+ }
+ 
+-BiotSystem::BiotSystem(string testcase, int _num_global_refinement, double _del_t, double _T) : fe_pressure(FE_Q<dim>(1), 1),
++BiotSystem::BiotSystem(string testcase, int _num_global_refinement, double _del_t, double _T) : fe_pressure(FE_Q<dim>(1), 1,
++                                                                                                FE_DGQ<dim>(0),1),
+                                                                                                 dof_handler_pressure(triangulation),
+                                                                                                 fe_displacement(FE_Q<dim>(1), dim),
+                                                                                                 dof_handler_displacement(triangulation),
+@@ -37,7 +42,8 @@ BiotSystem::BiotSystem(string testcase, int _num_global_refinement, double _del_
+                                                                                                 lambda(0.5),
+                                                                                                 mu(0.125),
+                                                                                                 dof_handler_output(triangulation),
+-                                                                                                fe_output(FE_DGQ<dim>(0), 1)
++                                                                                                fe_output(FE_DGQ<dim>(0), 1),
++                                                                                                mpi_com(MPI_COMM_WORLD)
+ {
+     num_global_refinement = _num_global_refinement;
+     del_t = _del_t;
+@@ -48,20 +54,3 @@ BiotSystem::BiotSystem(string testcase, int _num_global_refinement, double _del_
+         test_case = simple;
+     }
+ }
+-BiotSystem::BiotSystem(bool _bEG, int _num_global_refinement, double _del_t, double _T) : fe_pressure(FE_Q<dim>(1), 1, FE_DGQ<dim>(0), 1),
+-                                                                                          dof_handler_pressure(triangulation),
+-                                                                                          fe_displacement(FE_Q<dim>(1), dim),
+-                                                                                          dof_handler_displacement(triangulation),
+-                                                                                          permeability(0.05),
+-                                                                                          lambda(0.5),
+-                                                                                          mu(0.125),
+-                                                                                          dof_handler_output(triangulation),
+-                                                                                          fe_output(FE_DGQ<dim>(0), 1)
+-{
+-    bEG = _bEG;
+-    num_global_refinement = _num_global_refinement;
+-    del_t = _del_t;
+-    T = _T;
+-    h = 1. / std::pow(2, num_global_refinement);
+-    test_case = simple;
+-}
+\ No newline at end of file
+diff --git a/source/main.cc b/source/main.cc
+index 9a88797..f46a77d 100644
+--- a/source/main.cc
++++ b/source/main.cc
+@@ -2,6 +2,7 @@
+ using namespace std;
+ int main(int argc, char* argv[])
+ {
++  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+   try
+   {
+     int _numGlobalRefinement = atoi(argv[1]);
+diff --git a/source/postprocess/calc_error.cc b/source/postprocess/calc_error.cc
+index c509b19..08aece0 100644
+--- a/source/postprocess/calc_error.cc
++++ b/source/postprocess/calc_error.cc
+@@ -5,6 +5,46 @@
+ using namespace std;
+ void BiotSystem::calc_error()
+ {
++    QGauss<dim> quadrature_pressure(degree +2);
++    FEValues<dim> fe_values_pressure(fe_pressure, quadrature_pressure,
++                                    update_values | update_quadrature_points | update_JxW_values | update_gradients);
++    const unsigned int n_q_points = quadrature_pressure.size();
++    vector<Vector<double>> sol_p_values(n_q_points, Vector<double>(2));
++    vector<double> exact_p_values(n_q_points);
++    PressureSolution exact_p(t);
++    double L2_p_EG = 0;
++     typename DoFHandler<dim>::active_cell_iterator
++        cell = dof_handler_pressure.begin_active(),
++        endc = dof_handler_pressure.end();
++
++    for (; cell != endc; ++cell)
++        if (cell->is_locally_owned())
++        {
++
++            fe_values_pressure.reinit(cell);
++
++            //exact_pressure_gradient.vector_value_list(fe_values_pressure.get_quadrature_points(), exact_pressure_grads);
++            exact_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
++
++            fe_values_pressure.get_function_values(solution_pressure, sol_p_values);
++            //fe_values_pressure.get_function_gradients(solution_pressure, solution_grads_pressure);
++
++            for (unsigned int q = 0; q < n_q_points; ++q)
++            {
++                //local_error_CG = exact_pressure_values[q] - solution_values_pressure[q][0];
++                //L2_norm_CG += local_error_CG * local_error_CG * fe_values_pressure.JxW(q);
++
++                //local_error_DG = exact_pressure_values[q] - solution_values_pressure[q][1];
++                //L2_norm_DG += local_error_DG * local_error_DG * fe_values_pressure.JxW(q);
++
++                L2_p_EG += (exact_p_values[q] - sol_p_values[q][1] - sol_p_values[q][0])
++                *(exact_p_values[q] - sol_p_values[q][1] - sol_p_values[q][0])
++                * fe_values_pressure.JxW(q);
++
++
++            }
++        }
++    /*
+     Vector<float> difference_per_cell_pressure(triangulation.n_active_cells());
+     VectorTools::integrate_difference(dof_handler_pressure,
+                                       solution_pressure,
+@@ -16,6 +56,7 @@ void BiotSystem::calc_error()
+         //VectorTools::compute_global_error(triangulation,
+         //                                  difference_per_cell_pressure,
+         //                                  VectorTools::L2_norm);
++    */
+     /* Calculate the L2 norm of displacement solution */
+ 
+     Vector<float> difference_per_cell_displacement(triangulation.n_active_cells());
+@@ -57,12 +98,12 @@ void BiotSystem::calc_error()
+ 
+     convergence_table.add_value("time", t);
+     convergence_table.add_value("1/h", 1./h);
+-    convergence_table.add_value("L2_p", L2_norm_pressure);
++    convergence_table.add_value("L2_p", L2_p_EG);
+     convergence_table.add_value("L2_u", L2_norm_displacement);
+     double energy_norm = calc_u_energy_norm();
+     energy_norm = sqrt(energy_norm);
+     convergence_table.add_value("energy_u", energy_norm);
+-    l2_error_p.push_back(L2_norm_pressure);
++    l2_error_p.push_back(L2_p_EG);
+     l2_error_u.push_back(L2_norm_displacement);
+     energy_error_u.push_back(energy_norm);
+ }
+\ No newline at end of file
+diff --git a/source/postprocess/check_disp_solver_convergence.cc b/source/postprocess/check_disp_solver_convergence.cc
+index b39a893..904a054 100644
+--- a/source/postprocess/check_disp_solver_convergence.cc
++++ b/source/postprocess/check_disp_solver_convergence.cc
+@@ -17,7 +17,7 @@ void BiotSystem::check_disp_solver_convergence()
+         h = 1. / num_global_refinement;
+         // make_grid();
+         triangulation.refine_global(1);
+-        setup_system();
++        setup_system_eg();
+         VectorTools::interpolate(dof_handler_pressure,
+                                  PressureSolution(0),
+                                  solution_pressure);
+diff --git a/source/postprocess/output_error.cc b/source/postprocess/output_error.cc
+index d59a63c..86cdc41 100644
+--- a/source/postprocess/output_error.cc
++++ b/source/postprocess/output_error.cc
+@@ -15,6 +15,7 @@ void BiotSystem::output_error() {
+     ofstream error_table_file("error-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
+     convergence_table.write_tex(error_table_file);
+ 
++    /*
+     // p_indicators_table.set_precision("eta_fs", 6);
+     p_indicators_table.set_precision("eta_alg", 6);
+     p_indicators_table.set_precision("eta_time", 6);
+@@ -66,10 +67,12 @@ void BiotSystem::output_error() {
+ 
+     efficiency_table.set_precision("error", 6);
+     efficiency_table.set_precision("index", 6);
++    efficiency_table.set_precision("eta_sum", 6);
+     efficiency_table.set_scientific("error",true);
+     efficiency_table.set_scientific("index",true);
++    efficiency_table.set_scientific("eta_sum",true);
+     efficiency_table.set_tex_table_caption("Efficiency Index: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$");
+     ofstream efficiency_table_file("efficiency-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
+     efficiency_table.write_tex(efficiency_table_file, false);
+-
++    */
+ }
+\ No newline at end of file
+diff --git a/source/postprocess/plot_error.cc b/source/postprocess/plot_error.cc
+deleted file mode 100644
+index 4d86f3f..0000000
+--- a/source/postprocess/plot_error.cc
++++ /dev/null
+@@ -1,53 +0,0 @@
+-#include "BiotSystem.h"
+-#include "PressureSolution.h"
+-#include "DisplacementSolution.h"
+-using namespace std;
+-void BiotSystem::plot_error() const{
+-    Vector<double> interpolated_exact_sol(dof_handler_pressure.n_dofs());
+-    Vector<double> error(dof_handler_pressure.n_dofs());
+-    VectorTools::interpolate (dof_handler_pressure,
+-                              PressureSolution(t),
+-                              interpolated_exact_sol);
+-    error = interpolated_exact_sol;
+-    error -= solution_pressure;
+-    for (int i = 0; i < error.size(); i++){
+-        error[i] = std::abs(error[i]);
+-    }
+-    Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
+-    Vector<double> error_u(dof_handler_displacement.n_dofs());
+-    VectorTools::interpolate (dof_handler_displacement,
+-                              DisplacementSolution(t),
+-                              interpolated_exact_sol_u);
+-    error_u = interpolated_exact_sol_u;
+-    error_u -= solution_displacement;
+-    for (int i = 0; i < error_u.size(); i++){
+-        error_u[i] = std::abs(error_u[i]);
+-    }
+-    DataOut<dim> data_out;
+-    data_out.attach_dof_handler(dof_handler_pressure);
+-    data_out.add_data_vector(solution_pressure, "pressure");
+-    data_out.add_data_vector(interpolated_exact_sol, "exact_sol");
+-    data_out.add_data_vector(error, "error_p");
+-    data_out.build_patches();
+-    ofstream output("visual/error-p-" + std::to_string(timestep) +".vtk");
+-    data_out.write_vtk(output);
+-
+-    DataOut<dim> data_out_u;
+-    data_out_u.attach_dof_handler(dof_handler_displacement);
+-    vector<string> u_error_names;
+-    u_error_names.push_back("u_x_error");
+-    u_error_names.push_back("u_y_error");
+-    vector<string> u_names;
+-    u_names.push_back("u_x");
+-    u_names.push_back("u_y");
+-    vector<string> u_exact_names;
+-    u_exact_names.push_back("u_x_exact");
+-    u_exact_names.push_back("u_y_exact");
+-    data_out_u.add_data_vector(error_u, u_error_names);
+-    data_out_u.add_data_vector(solution_displacement, u_names);
+-    data_out_u.add_data_vector(interpolated_exact_sol_u, u_exact_names);
+-    data_out_u.build_patches();
+-    ofstream output_u("visual/error-u-" + std::to_string(timestep) +".vtk");
+-    data_out_u.write_vtk(output_u);
+-}
+-
+diff --git a/source/solver/assemble_system_displacement.cc b/source/solver/assemble_system_displacement.cc
+index 278265d..c2ec83d 100644
+--- a/source/solver/assemble_system_displacement.cc
++++ b/source/solver/assemble_system_displacement.cc
+@@ -4,7 +4,7 @@
+ #include "AuxTools.h"
+ using namespace std;
+ void BiotSystem::assemble_system_displacement()
+-{   
++{
+     system_matrix_displacement.reinit(sparsity_pattern_displacement);
+     system_rhs_displacement.reinit(dof_handler_displacement.n_dofs());
+     QGauss<dim> quadrature_formula(fe_displacement.degree + 1);
+@@ -33,12 +33,12 @@ void BiotSystem::assemble_system_displacement()
+                                            Vector<double>(dim));
+     //std::vector<Vector<double>> grad_p_values(n_q_points,
+     //                                       Vector<double>(dim));
+-    std::vector<double> pore_pressure_values(n_q_points);
+-    std::vector<Tensor<1, dim>> grad_p_values(n_q_points);
+-    Tensor<2,dim> identity = Tensors::get_Identity<dim> ();
++    std::vector<Vector<double>> pore_pressure_values_eg(n_q_points, Vector<double>(2));
++    // std::vector<Tensor<1, dim>> grad_p_values(n_q_points);
++    Tensor<2, dim> identity = Tensors::get_Identity<dim>();
+ 
+     InitialPressure initial_pressure;
+-    const FEValuesExtractors::Vector displacements (0);
++    const FEValuesExtractors::Vector displacements(0);
+     // Now we can begin with the loop over all cells:
+     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler_displacement.begin_active(),
+                                                    endc = dof_handler_displacement.end();
+@@ -59,10 +59,11 @@ void BiotSystem::assemble_system_displacement()
+         right_hand_side.vector_value_list(fe_values.get_quadrature_points(),
+                                           rhs_values);
+ 
+-        fe_values_pressure.get_function_values(solution_pressure, pore_pressure_values);
+-        fe_values_pressure.get_function_gradients(solution_pressure, grad_p_values);
++        fe_values_pressure.get_function_values(solution_pressure, pore_pressure_values_eg);
++
++        // fe_values_pressure.get_function_gradients(solution_pressure, grad_p_values);
+         // initial_pressure.value_list(fe_values_pressure.get_quadrature_points(), pore_pressure_values);
+-        
++
+         // Assemble the cell matrix as in elasticity_cg
+         for (unsigned int q = 0; q < n_q_points; ++q)
+         {
+@@ -70,11 +71,11 @@ void BiotSystem::assemble_system_displacement()
+             std::vector<Tensor<2, dim>> phi_i_grads_u(dofs_per_cell);
+             std::vector<Tensor<2, dim>> E_phi(dofs_per_cell);
+             std::vector<Tensor<2, dim>> sigma_phi(dofs_per_cell);
+-
++            // cout <<"fe_values at quadrature_point q = " << fe_values_pressure.quadrature_point(q) <<endl;
+             // Compute and store desired quantities
+             for (unsigned int k = 0; k < dofs_per_cell; ++k)
+             {
+-                phi_i_u[k] =fe_values[displacements].value(k,q);
++                phi_i_u[k] = fe_values[displacements].value(k, q);
+                 phi_i_grads_u[k] = fe_values[displacements].gradient(k, q);
+                 E_phi[k] = 0.5 * (phi_i_grads_u[k] + transpose(phi_i_grads_u[k]));
+                 sigma_phi[k] = 2.0 * mu_values[q] * E_phi[k] + lambda_values[q] * trace(E_phi[k]) * identity;
+@@ -86,16 +87,14 @@ void BiotSystem::assemble_system_displacement()
+                 { // assemble cell level matrix
+                     cell_matrix(j, i) += fe_values.JxW(q) * scalar_product(sigma_phi[i], E_phi[j]);
+                 }
+-
+                 // assemble cell level rhs as in elasticity_cg
+-                 cell_rhs(i) += biot_alpha * pore_pressure_values[q] * trace(phi_i_grads_u[i]) *fe_values.JxW(q);
+-                 // cell_rhs(i) += 0.75 * pore_pressure_values[q] * trace(phi_i_grads_u[i]) *fe_values.JxW(q);
++                cell_rhs(i) += biot_alpha * (pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]) * trace(phi_i_grads_u[i]) * fe_values.JxW(q);
++                // cell_rhs(i) += 0.75 * pore_pressure_values[q] * trace(phi_i_grads_u[i]) *fe_values.JxW(q);
+                 // cell_rhs(i) -= biot_alpha * (grad_p_values[q]*phi_i_u[i])*fe_values.JxW(q);
+             }
+-            
++
+         } // end q_point
+-        
+-        
++
+         cell->get_dof_indices(local_dof_indices);
+         constraints_displacement.distribute_local_to_global(cell_matrix, local_dof_indices, system_matrix_displacement);
+         constraints_displacement.distribute_local_to_global(cell_rhs, local_dof_indices, system_rhs_displacement);
+@@ -129,7 +128,7 @@ void BiotSystem::assemble_system_displacement()
+                                        solution_displacement,
+                                        system_rhs_displacement);
+     */
+-    
++
+     std::map<types::global_dof_index, double> boundary_values;
+     VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                              0,
+@@ -140,6 +139,4 @@ void BiotSystem::assemble_system_displacement()
+                                        system_matrix_displacement,
+                                        solution_displacement,
+                                        system_rhs_displacement);
+-                                       
+-    
+ }
+\ No newline at end of file
+diff --git a/source/solver/assemble_system_pressure.cc b/source/solver/assemble_system_pressure.cc
+deleted file mode 100644
+index 5d01ef4..0000000
+--- a/source/solver/assemble_system_pressure.cc
++++ /dev/null
+@@ -1,107 +0,0 @@
+-#include "BiotSystem.h"
+-#include "AuxTools.h"
+-using namespace std;
+-void BiotSystem::assemble_system_pressure()
+-{
+-    system_matrix_pressure.reinit(sparse_pattern_pressure);
+-    system_rhs_pressure.reinit(dof_handler_pressure.n_dofs());
+-    QGauss<dim> quadrature(fe_pressure.degree + 1);
+-    FEValues<dim> fe_value(fe_pressure,
+-                           quadrature, update_values | update_quadrature_points | update_gradients | update_JxW_values);
+-    FEValues<dim> fe_value_displacement(fe_displacement,
+-                                        quadrature, update_values | update_quadrature_points | update_gradients | update_JxW_values);
+-    const unsigned int dofs_per_cell = fe_pressure.dofs_per_cell;
+-    const unsigned int n_q_points = quadrature.size();
+-    FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
+-    Vector<double> cell_rhs(dofs_per_cell);
+-    vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+-
+-    vector<double> permeability_values(n_q_points);
+-    vector<double> prev_timestep_sol_pressure_values(n_q_points);
+-    vector<double> prev_fs_sol_pressure_values(n_q_points);
+-    vector<vector<Tensor<1, dim>>> prev_timestep_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
+-    vector<vector<Tensor<1, dim>>> prev_fs_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
+-    double prev_timestep_mean_stress;
+-    double prev_fs_mean_stress;
+-    
+-    typename DoFHandler<dim>::active_cell_iterator cell = dof_handler_pressure.begin_active(),
+-                                                   endc = dof_handler_pressure.end();
+-
+-    typename DoFHandler<dim>::active_cell_iterator
+-        cell_displacement = dof_handler_displacement.begin_active();
+-    for (; cell != endc; ++cell, ++cell_displacement)
+-    {
+-        fe_value.reinit(cell);
+-        fe_value_displacement.reinit(cell_displacement);
+-        cell_matrix = 0;
+-        cell_rhs = 0;
+-        /* get the function values at current element */
+-        permeability.value_list(fe_value.get_quadrature_points(), permeability_values);
+-        fe_value.get_function_values(prev_timestep_sol_pressure, prev_timestep_sol_pressure_values);
+-        fe_value.get_function_values(prev_fs_sol_pressure, prev_fs_sol_pressure_values);
+-        fe_value_displacement.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_sol_grad_u_values);
+-        fe_value_displacement.get_function_gradients(prev_fs_sol_displacement, prev_fs_sol_grad_u_values);
+-        /* assemble cell level matrix and rhs */
+-        for (unsigned int q = 0; q < n_q_points; q++)
+-        {
+-            // calculate the mean stress values at the quadrature point
+-            const Tensor<2, dim> prev_time_grad_u = Tensors ::get_grad_u<dim>(q, prev_timestep_sol_grad_u_values);
+-            const double prev_time_div_u = Tensors ::get_divergence_u<dim>(prev_time_grad_u);
+-            const Tensor<2, dim> prev_fs_grad_u = Tensors ::get_grad_u<dim>(q, prev_fs_sol_grad_u_values);
+-            const double prev_fs_div_u = Tensors ::get_divergence_u<dim>(prev_fs_grad_u);
+-            prev_timestep_mean_stress = K_b * prev_time_div_u 
+-                                         - biot_alpha * prev_timestep_sol_pressure_values[q];
+-            prev_fs_mean_stress = K_b * prev_fs_div_u
+-                                         - biot_alpha * prev_fs_sol_pressure_values[q];
+-            for (unsigned int i = 0; i < dofs_per_cell; i++)
+-            {
+-                for (unsigned int j = 0; j < dofs_per_cell; j++)
+-                {
+-                    // elliptic part
+-                    cell_matrix(i, j) +=
+-                        (del_t / mu_f * permeability_values[q] * // 1/mu_f * k
+-                         fe_value.shape_grad(i, q) *          // grad phi_i(x_q)
+-                         fe_value.shape_grad(j, q) *          // grad phi_j(x_q)
+-                         fe_value.JxW(q));                    // dx
+-                    // parabolic part
+-                    cell_matrix(i, j) +=
+-                        ((biot_inv_M + biot_alpha * biot_alpha / K_b) *                      // (1/M + alpha^2/K_b)/del_t
+-                         fe_value.shape_value(i, q) * fe_value.shape_value(j, q) * fe_value.JxW(q)); // phi(x_q)*phi(x_q) dx
+-                }
+-                // source term
+-                //cell_rhs(i) +=
+-                //    (fe_value.shape_value(i, q) * // phi_i(x_q)
+-                //     1 *                          // f(x_q)
+-                //     fe_value.JxW(q));            // dx
+-
+-                // prev time step
+-                cell_rhs(i) +=
+-                    ((biot_inv_M + biot_alpha * biot_alpha / K_b)  *                      // (1/M + alpha^2/K_b)/del_t
+-                     prev_timestep_sol_pressure_values[q] *
+-                     fe_value.shape_value(i, q) * fe_value.JxW(q));
+-
+-                // change in mean stress
+-                cell_rhs(i) -=
+-                    (biot_alpha / K_b  *
+-                     (prev_fs_mean_stress - prev_timestep_mean_stress) *
+-                     fe_value.shape_value(i, q) * fe_value.JxW(q));
+-            }
+-        }
+-        cell->get_dof_indices(local_dof_indices);
+-        // constraints_pressure.distribute_local_to_global(cell_matrix, local_dof_indices, system_matrix_pressure);
+-        // constraints_pressure.distribute_local_to_global(cell_rhs, local_dof_indices, system_rhs_pressure);
+-        for (int i=0; i < dofs_per_cell;i++){
+-            for(int j=0;j<dofs_per_cell;j++){
+-                system_matrix_pressure.add(local_dof_indices[i],local_dof_indices[j],cell_matrix(i,j));
+-            }
+-            system_rhs_pressure(local_dof_indices[i]) += cell_rhs(i);
+-        }
+-    }
+-
+-    std::map<types::global_dof_index, double> boundary_values;
+-    VectorTools::interpolate_boundary_values(dof_handler_pressure,
+-                                             0,
+-                                             ZeroFunction<2>(),
+-                                             boundary_values);
+-    MatrixTools::apply_boundary_values(boundary_values, system_matrix_pressure, solution_pressure, system_rhs_pressure);
+-}
+\ No newline at end of file
+diff --git a/source/solver/check_fs_convergence.cc b/source/solver/check_fs_convergence.cc
+index 3a1f7bc..cb8c9bc 100644
+--- a/source/solver/check_fs_convergence.cc
++++ b/source/solver/check_fs_convergence.cc
+@@ -4,7 +4,7 @@ using namespace std;
+ // check the convergence of fixed stress, return the residual
+ double BiotSystem::check_fs_convergence()
+ {
+-    QGauss<dim> quadrature_pressure(fe_pressure.degree + 1);
++    QGauss<dim> quadrature_pressure(degree + 1);
+     QGauss<dim> quadrature_displacement(fe_displacement.degree + 1);
+     FEValues<dim> fe_value_pressure(fe_pressure,
+                                     quadrature_pressure, update_values | update_quadrature_points | update_gradients | update_JxW_values);
+@@ -19,8 +19,8 @@ double BiotSystem::check_fs_convergence()
+ 
+     vector<vector<Tensor<1, dim>>> prev_fs_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
+     vector<vector<Tensor<1, dim>>> grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
+-    vector<double> prev_fs_sol_pressure_values(n_q_points);
+-    vector<double> pressure_values(n_q_points);
++    vector<Vector<double>> prev_fs_sol_pressure_values(n_q_points, Vector<double> (2));
++    vector<Vector<double>> pressure_values(n_q_points, Vector<double> (2));
+     
+     Vector<double> difference_in_u = solution_displacement;
+     difference_in_u -= prev_fs_sol_displacement;
+@@ -47,8 +47,8 @@ double BiotSystem::check_fs_convergence()
+             const double div_u = Tensors ::get_divergence_u<dim>(grad_u);
+             const Tensor<2, dim> prev_fs_grad_u = Tensors ::get_grad_u<dim>(q, prev_fs_sol_grad_u_values);
+             const double prev_fs_div_u = Tensors ::get_divergence_u<dim>(prev_fs_grad_u);
+-            mean_stress = K_b * div_u - biot_alpha * pressure_values[q];
+-            prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * prev_fs_sol_pressure_values[q];
++            mean_stress = K_b * div_u - biot_alpha * (pressure_values[q][0] + pressure_values[q][1]);
++            prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0]+ prev_fs_sol_pressure_values[q][1]);
+             residual += (mean_stress - prev_fs_mean_stress) * (mean_stress - prev_fs_mean_stress) * fe_value_pressure.JxW(q);
+             l2square_mean_stress += mean_stress * mean_stress * fe_value_pressure.JxW(q);
+         
+diff --git a/source/solver/fixed_stress_iteration.cc b/source/solver/fixed_stress_iteration.cc
+index dae66a8..c9fe6ac 100644
+--- a/source/solver/fixed_stress_iteration.cc
++++ b/source/solver/fixed_stress_iteration.cc
+@@ -11,8 +11,10 @@ void BiotSystem::fixed_stress_iteration()
+         prev_fs_sol_displacement = solution_displacement;
+         fs_count++;
+         cout << "fixed stress no. " << fs_count << endl;
+-        assemble_system_pressure();
+-        solve_pressure();
++        cout << "solve for pressure" << endl;
++        assemble_system_pressure_eg();
++        solve_pressure_eg();
++        cout << "solve for displacement" << endl;
+         assemble_system_displacement();
+         solve_displacement();
+         l2_norm = check_fs_convergence();
+@@ -21,6 +23,8 @@ void BiotSystem::fixed_stress_iteration()
+         // process_solution(fs_count);
+         // plot_error(fs_count);
+     }
++
++    cout << "fixed stress iteration converged!" << endl;
+     //TODO: not correct
+     eta_fs.push_back(1 / sqrt(del_t) * l2_norm);
+ }
+\ No newline at end of file
+diff --git a/source/solver/run_fixed_stress.cc b/source/solver/run_fixed_stress.cc
+index 09ad5dc..4479691 100644
+--- a/source/solver/run_fixed_stress.cc
++++ b/source/solver/run_fixed_stress.cc
+@@ -1,17 +1,23 @@
+ #include "BiotSystem.h"
+ #include "PressureSolution.h"
++#include "PressureSolutionEG.h"
+ using namespace std;
+ void BiotSystem::run_fixed_stress()
+ {
+     make_grid();
+-    setup_system();
+-    // interpolate initial pressure
+-    VectorTools::interpolate(dof_handler_pressure,
+-                            PressureSolution(0),
+-                            solution_pressure);
++    setup_system_eg();
++    /* Interpolate initial EG pressure */
++        // solution_pressure = 0.;
++        // FEValuesExtractors::Scalar pressure_cg(0);
++        // ComponentMask pressure_cg_mask = fe_pressure.component_mask(pressure_cg);
++
++        VectorTools::interpolate(dof_handler_pressure,
++                                 PressureSolutionEG(0),
++                                 solution_pressure);
++    
+     prev_timestep_sol_pressure = solution_pressure;
+     // Initialize u_0
+-    cout<<"Initializing u_0"<<endl;
++    cout << "Initializing u_0" << endl;
+     assemble_system_displacement();
+     solve_displacement();
+     prev_timestep_sol_displacement = solution_displacement;
+@@ -22,11 +28,11 @@ void BiotSystem::run_fixed_stress()
+         fixed_stress_iteration();
+         // output_displacement(timestep, -1);
+         // output_pressure(timestep, -1);
+-        plot_error();
++        //plot_error();
+         calc_error();
+-        calc_a_posteriori_indicators_p();
+-        calc_a_posteriori_indicators_u();
+-        calc_efficiency_indices();
++        // calc_a_posteriori_indicators_p();
++        // calc_a_posteriori_indicators_u();
++        // calc_efficiency_indices();
+         prev_timestep_sol_displacement = solution_displacement;
+         prev_timestep_sol_pressure = solution_pressure;
+     }
+diff --git a/source/solver/setup_system.cc b/source/solver/setup_system.cc
+deleted file mode 100644
+index ed2012c..0000000
+--- a/source/solver/setup_system.cc
++++ /dev/null
+@@ -1,45 +0,0 @@
+-#include "BiotSystem.h"
+-
+-void BiotSystem::setup_system()
+-{
+-    dof_handler_pressure.distribute_dofs(fe_pressure);
+-    std::cout << "Number of degrees of freedom for pressure: " << dof_handler_pressure.n_dofs() << std::endl;
+-    constraints_pressure.clear();
+-    DoFTools::make_hanging_node_constraints(dof_handler_pressure,
+-                                            constraints_pressure);
+-    constraints_pressure.close();
+-
+-    DynamicSparsityPattern dsp_pressure(dof_handler_pressure.n_dofs(), dof_handler_pressure.n_dofs());
+-    DoFTools::make_sparsity_pattern(dof_handler_pressure, dsp_pressure,
+-                                    constraints_pressure,
+-                                    /*keep_constrained_dofs = */ true);
+-    sparse_pattern_pressure.copy_from(dsp_pressure);
+-
+-    system_matrix_pressure.reinit(sparse_pattern_pressure);
+-    solution_pressure.reinit(dof_handler_pressure.n_dofs());
+-    system_rhs_pressure.reinit(dof_handler_pressure.n_dofs());
+-
+-    dof_handler_displacement.distribute_dofs(fe_displacement);
+-    std::cout << "Number of degrees of freedom for displacement: " << dof_handler_displacement.n_dofs() << std::endl;
+-    constraints_displacement.clear();
+-    DoFTools::make_hanging_node_constraints(dof_handler_displacement,
+-                                            constraints_displacement);
+-    constraints_displacement.close();
+-
+-    DynamicSparsityPattern dsp_displacement(dof_handler_displacement.n_dofs(), dof_handler_displacement.n_dofs());
+-    DoFTools::make_sparsity_pattern(dof_handler_displacement, dsp_displacement,
+-                                    constraints_displacement,
+-                                    /*keep_constrained_dofs = */ true);
+-    sparsity_pattern_displacement.copy_from(dsp_displacement);
+-
+-    system_matrix_displacement.reinit(sparsity_pattern_displacement);
+-
+-    solution_displacement.reinit(dof_handler_displacement.n_dofs());
+-    system_rhs_displacement.reinit(dof_handler_displacement.n_dofs());
+-
+-    dof_handler_output.distribute_dofs(fe_output);
+-    cell_eta_time.reinit(dof_handler_output.n_dofs());
+-    cell_eta_E_p.reinit(dof_handler_output.n_dofs());
+-    cell_eta_E_partial_u.reinit(dof_handler_output.n_dofs());
+-    cell_eta_E_u.reinit(dof_handler_output.n_dofs());
+-}
+\ No newline at end of file
+diff --git a/source/solver/solve_pressure.cc b/source/solver/solve_pressure.cc
+deleted file mode 100644
+index af2d30b..0000000
+--- a/source/solver/solve_pressure.cc
++++ /dev/null
+@@ -1,9 +0,0 @@
+-#include "BiotSystem.h"
+-void BiotSystem::solve_pressure(){
+-    SolverControl solver_control(1000, 1e-12);
+-    SolverCG<> solver(solver_control);
+-    PreconditionSSOR<> preconditioner;
+-    preconditioner.initialize(system_matrix_pressure, 1.2);
+-    solver.solve(system_matrix_pressure, solution_pressure, system_rhs_pressure, preconditioner);
+-    //constraints_pressure.distribute(solution_pressure);
+-}
+\ No newline at end of file
