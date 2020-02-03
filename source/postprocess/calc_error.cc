@@ -44,6 +44,7 @@ void BiotSystem::calc_error()
 
             }
         }
+    L2_p_EG = sqrt(L2_p_EG);
     /*
     Vector<float> difference_per_cell_pressure(triangulation.n_active_cells());
     VectorTools::integrate_difference(dof_handler_pressure,
