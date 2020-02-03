@@ -1,9 +1,8 @@
 #include "BiotSystem.h"
 #include "AuxTools.h"
 void BiotSystem::solve_pressure_eg(){
-    cout << "Sovle Pressure EG" << endl;
     LA::MPI::BlockVector sol(system_rhs_pressure);
-    sol = solution_pressure;
+    // sol = solution_pressure;
 
     SolverControl solver_control(10000, 1e-10 * system_rhs_pressure.l2_norm());
 
@@ -23,14 +22,13 @@ void BiotSystem::solve_pressure_eg(){
         preconditioner(system_matrix_pressure,
                        preconditioner_pressure_cg, preconditioner_pressure_dg);
 
-    solver.solve(system_matrix_pressure, sol,
+    solver.solve(system_matrix_pressure, solution_pressure,
                  system_rhs_pressure, preconditioner);
 
-    constraints_pressure.distribute(sol);
+    constraints_pressure.distribute(solution_pressure);
     // newton_update_pressure = sol;
 
     //solver_dg.solve(system_matrix_pressure.block(1,1), sol_inc.block(1), Residual_Vector.block(1));
     //solver_cg.solve(system_matrix_pressure.block(0,0), sol_inc.block(0), Residual_Vector.block(0));
 
-    cout << "Sovle Pressure EG -end" << endl;
 }

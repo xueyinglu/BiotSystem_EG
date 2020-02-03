@@ -90,7 +90,7 @@ private:
     double gamma_penal;
     double min_cell_diameter;
     bool bNeaumannBD = false;
-    bool bCG_WeaklyBD = true;
+    bool bCG_WeaklyBD = false;
     double d_SForm = 0; //SIPG
 
     /* element-wise a posteriori error indicators*/
