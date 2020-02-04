@@ -104,9 +104,13 @@ private:
     vector<double> eta_fs;
     vector<double> eta_alg;
     vector<double> eta_time;
-    vector<double> eta_p_residual; // error of flow residual at time t_n
-    vector<double> eta_flux_jump;  // error of flux jump at time t_n
+    // vector<double> eta_p_residual; // error of flow residual at time t_n
+    // vector<double> eta_flux_jump;  // error of flux jump at time t_n
     vector<double> eta_flow;
+    vector<double> eta_jump;
+    vector<double> eta_pen;
+    vector<double> eta_partial_p_J;
+    vector<double> eta_p_J;
 
     vector<double> eta_face_partial_sigma_n; // the errors on the tensor's time derivative for time step n
     vector<double> eta_face_partial_sigma;   // the (cumulative in time ) errors on the tensor's time derivative_form
@@ -144,7 +148,7 @@ private:
     //void process_solution(int fs_count); // compute the errors
     //  void plot_error() const;
 
-    void calc_a_posteriori_indicators_p();
+    void calc_a_posteriori_indicators_p_eg();
     void calc_a_posteriori_indicators_u();
 
     double calc_u_energy_norm();
