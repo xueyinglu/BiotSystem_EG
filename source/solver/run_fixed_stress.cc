@@ -30,9 +30,9 @@ void BiotSystem::run_fixed_stress()
         // output_pressure(timestep, -1);
         //plot_error();
         calc_error();
-        // calc_a_posteriori_indicators_p();
-        // calc_a_posteriori_indicators_u();
-        // calc_efficiency_indices();
+        calc_a_posteriori_indicators_p_eg();
+        calc_a_posteriori_indicators_u();
+        calc_efficiency_indices();
         prev_timestep_sol_displacement = solution_displacement;
         prev_timestep_sol_pressure = solution_pressure;
     }

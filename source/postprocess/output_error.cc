@@ -15,31 +15,24 @@ void BiotSystem::output_error() {
     ofstream error_table_file("error-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
     convergence_table.write_tex(error_table_file);
 
-    /*
-    // p_indicators_table.set_precision("eta_fs", 6);
+    
     p_indicators_table.set_precision("eta_alg", 6);
     p_indicators_table.set_precision("eta_time", 6);
     p_indicators_table.set_precision("eta_flow", 6);
-    // p_indicators_table.set_precision("eta_p_residual", 6);
-    //p_indicators_table.set_precision("eta_flux_jump", 6);
+    p_indicators_table.set_precision("eta_jump", 6);
     p_indicators_table.set_precision("sum", 6);
     p_indicators_table.set_precision("error", 6);
-    p_indicators_table.set_precision("eff", 6);
-    //p_indicators_table.set_scientific("eta_fs",true);
+    
     p_indicators_table.set_scientific("eta_alg",true);
     p_indicators_table.set_scientific("eta_time", true);
     p_indicators_table.set_scientific("eta_flow", true);
-    // p_indicators_table.set_scientific("eta_p_residual", true);
-    // p_indicators_table.set_scientific("eta_flux_jump", true);
+    p_indicators_table.set_scientific("eta_jump", true);
     p_indicators_table.set_scientific("sum", true);
     p_indicators_table.set_scientific("error", true);
-    p_indicators_table.set_scientific("eff", true);
-    //p_indicators_table.set_tex_caption("eta_fs", "$\\eta_{\\text{fs}}$");
     p_indicators_table.set_tex_caption("eta_alg", "$\\eta_{\\text{alg}}$");
     p_indicators_table.set_tex_caption("eta_time", "$\\eta_{\\text{time}}$");
     p_indicators_table.set_tex_caption("eta_flow", "$\\eta_{\\text{flow}}$");
-    //p_indicators_table.set_tex_caption("eta_p_residual", "$\\eta_{\\text{p\\_residual}}$");
-    //p_indicators_table.set_tex_caption("eta_flux_jump", "$\\eta_{\\text{flux\\_jump}}$");
+    p_indicators_table.set_tex_caption("eta_jump", "$\\eta_{\\text{jump}}$");
     p_indicators_table.set_tex_table_caption("Flow indicators: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$"); 
     
     u_indicators_table.set_precision("eta_face_partial_sigma", 6);
@@ -74,5 +67,5 @@ void BiotSystem::output_error() {
     efficiency_table.set_tex_table_caption("Efficiency Index: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$");
     ofstream efficiency_table_file("efficiency-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
     efficiency_table.write_tex(efficiency_table_file, false);
-    */
+    
 }
