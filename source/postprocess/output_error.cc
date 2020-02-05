@@ -58,14 +58,6 @@ void BiotSystem::output_error() {
     p_indicators_table.write_tex(aposterior_table_file, false);
     u_indicators_table.write_tex(aposterior_table_file, false);
 
-    efficiency_table.set_precision("error", 6);
-    efficiency_table.set_precision("index", 6);
-    efficiency_table.set_precision("eta_sum", 6);
-    efficiency_table.set_scientific("error",true);
-    efficiency_table.set_scientific("index",true);
-    efficiency_table.set_scientific("eta_sum",true);
-    efficiency_table.set_tex_table_caption("Efficiency Index: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$");
-    ofstream efficiency_table_file("efficiency-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
-    efficiency_table.write_tex(efficiency_table_file, false);
+    
     
 }
