@@ -27,6 +27,7 @@ void BiotSystem::plot_error() const
         error[i] = std::abs(error[i]);
     }
     */
+   if (test_case == benchmark || test_case == terzaghi){
     Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
     Vector<double> error_u(dof_handler_displacement.n_dofs());
     VectorTools::interpolate(dof_handler_displacement,
@@ -65,4 +66,26 @@ void BiotSystem::plot_error() const
     data_out_u.build_patches();
     ofstream output_u("visual/error-u-" + std::to_string(timestep) + ".vtk");
     data_out_u.write_vtk(output_u);
+   }
+
+   else if (test_case == TestCase::heterogeneous){
+      DataOut<dim> data_out;
+    data_out.attach_dof_handler(dof_handler_pressure);
+    vector<string> sol_names;
+    sol_names.push_back("P_CG");
+    sol_names.push_back("P_DG");
+    data_out.add_data_vector(solution_pressure, sol_names);
+    data_out.build_patches();
+    ofstream output("visual/sol-p-" + std::to_string(timestep) + ".vtk");
+    data_out.write_vtk(output); 
+    DataOut<dim> data_out_u;
+    data_out_u.attach_dof_handler(dof_handler_displacement);
+    vector<string> u_names;
+    u_names.push_back("u_x");
+    u_names.push_back("u_y");
+    data_out_u.add_data_vector(solution_displacement, u_names);
+    data_out_u.build_patches();
+    ofstream output_u("visual/sol-u-" + std::to_string(timestep) + ".vtk");
+    data_out_u.write_vtk(output_u); 
+   }
 }

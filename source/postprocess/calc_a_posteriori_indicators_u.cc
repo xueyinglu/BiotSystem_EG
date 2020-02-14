@@ -221,6 +221,6 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     data_out.attach_dof_handler(dof_handler_output);
     data_out.add_data_vector(cell_eta_u, "eta_E_u", DataOut<dim>::type_dof_data);
     data_out.build_patches();
-    ofstream output("output/indicators-u" + to_string(timestep) + ".vtk");
+    ofstream output("visual/indicators-u" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);
 }
