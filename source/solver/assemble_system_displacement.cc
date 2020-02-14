@@ -2,8 +2,6 @@
 #include "DisplacementSolution.h"
 #include "InitialPressure.h"
 #include "AuxTools.h"
-#include "LambdaFunction.h"
-#include "MuFunction.h"
 using namespace std;
 void BiotSystem::assemble_system_displacement()
 {
@@ -43,8 +41,6 @@ void BiotSystem::assemble_system_displacement()
     Tensor<2, dim> identity = Tensors::get_Identity<dim>();
 
     InitialPressure initial_pressure;
-    LambdaFunction lambda_function;
-    MuFunction mu_function;
     const FEValuesExtractors::Vector displacements(0);
     // Now we can begin with the loop over all cells:
     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler_displacement.begin_active(),

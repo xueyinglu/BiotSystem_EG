@@ -49,8 +49,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
     vector<Vector<double>> laplacian_p_values(n_q_points, Vector<double> (2));
 
     vector<types::global_dof_index> output_dofs(dof_handler_output.get_fe().dofs_per_cell);
-    cell_eta_time = 0;
-    cell_eta_E_p = 0;
+    cell_eta_p = 0;
     for (; cell != endc; ++cell, ++cell_displacement, ++cell_output)
     {
         fe_value_pressure.reinit(cell);
@@ -61,6 +60,9 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
         fe_value_displacement.get_function_gradients(solution_displacement, grad_u_values);
         fe_value_displacement.get_function_gradients(solution_displacement, prev_timestep_grad_u_values);
         permeability.value_list(fe_value_pressure.get_quadrature_points(), permeability_values);
+        if (test_case == TestCase::heterogeneous){
+           perm_function.value_list(fe_value_pressure.get_quadrature_points(), permeability_values); 
+        }
         cell_output->get_dof_indices(output_dofs);
         for (unsigned int q = 0; q < n_q_points; q++)
         {
@@ -96,8 +98,9 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                                          update_values | update_gradients | update_quadrature_points | update_JxW_values);
     cell = dof_handler_pressure.begin_active();
     cell_output = dof_handler_output.begin_active();
-    for (; cell!= endc; ++cell)
-    {
+    for (; cell!= endc; ++cell, ++cell_output)
+    {   
+        cell_output->get_dof_indices(output_dofs);
         for (unsigned int face_no = 0; face_no < GeometryInfo<dim>::faces_per_cell; ++face_no)
         {
             typename DoFHandler<dim>::face_iterator face_p = cell->face(face_no);
@@ -133,8 +136,17 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                     eta_p_J_n+= jump*jump*fe_face_p.JxW(q); 
                     double flux_jump = permeability.value(fe_face_p.quadrature_point(q),0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1])  * n 
                                     - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1] )  * n);
+                    if (test_case == TestCase::heterogeneous)
+                    {
+                       flux_jump = perm_function.value(fe_face_p.quadrature_point(q),0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1])  * n 
+                                    - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1] )  * n); 
+                    }
                     eta_flux_e_n += flux_jump * flux_jump * fe_face_p.JxW(q);
                     //TODO add the face integrals to the visualization
+                    cell_eta_p[output_dofs[0]] += jump_t*jump_t*fe_face_p.JxW(q);
+                    cell_eta_p[output_dofs[0]] += jump*jump*fe_face_p.JxW(q);
+                    cell_eta_p[output_dofs[0]] += flux_jump * flux_jump * fe_face_p.JxW(q);
+                     
                 }
 
             }
@@ -192,8 +204,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
 
     DataOut<dim> data_out;
     data_out.attach_dof_handler(dof_handler_output);
-    data_out.add_data_vector(cell_eta_time, "eta_time", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_eta_E_p, "eta_E_p", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_eta_p, "eta_E_p", DataOut<dim>::type_dof_data);
     data_out.build_patches();
     ofstream output("visual/indicators-p" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);

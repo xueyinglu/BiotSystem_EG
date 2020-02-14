@@ -1,6 +1,5 @@
 #include "BiotSystem.h"
 #include "AuxTools.h"
-#include "PermFunction.h"
 using namespace std;
 void BiotSystem::assemble_system_pressure_eg()
 {
@@ -60,7 +59,6 @@ void BiotSystem::assemble_system_pressure_eg()
     double d_Big_K = 1; // What is this?
 
     vector<double> permeability_values(n_q_points);
-    PermFunction perm_function;
     vector<Vector<double>> prev_timestep_sol_pressure_values(n_q_points, Vector<double>(2));
     vector<Vector<double>> prev_fs_sol_pressure_values(n_q_points, Vector<double>(2));
     vector<vector<Tensor<1, dim>>> prev_timestep_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));

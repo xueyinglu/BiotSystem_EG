@@ -3,6 +3,9 @@
 #include "DealiiHeader.h"
 #include "InitialPressure.h"
 #include "RightHandSide.h"
+#include "PermFunction.h"
+#include "LambdaFunction.h"
+#include "MuFunction.h"
 namespace LA
 {
 using namespace dealii::LinearAlgebraTrilinos;
@@ -77,6 +80,9 @@ private:
     InitialPressure initial_pressure;
     ConstantFunction<dim> permeability;
     ConstantFunction<dim> lambda, mu;
+    PermFunction perm_function;
+    LambdaFunction lambda_function;
+    MuFunction mu_function;
     double pressure_dirichlet_bc;
     Tensor<1,dim> traction_bc;
     double lame_lambda;
