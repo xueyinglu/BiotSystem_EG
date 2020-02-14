@@ -68,7 +68,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
             eta_t_p_n += permeability_values[q] *
                          cell_difference.norm_square() *
                          fe_value_pressure.JxW(q);
-            cell_eta_time[output_dofs[0]] += permeability_values[q] *
+            cell_eta_p[output_dofs[0]] += permeability_values[q] *
                                              cell_difference.norm_square() * fe_value_pressure.JxW(q);
 
             double cell_residual = (1 / mu_f * permeability_values[q] * (laplacian_p_values[q][0] + laplacian_p_values[q][1] )
@@ -76,7 +76,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                                     - biot_alpha / del_t * (grad_u_values[q][0][0] + grad_u_values[q][1][1] - prev_timestep_grad_u_values[q][0][0] - prev_timestep_grad_u_values[q][1][1]));
             // cout << "cell residual = " << cell_residual << endl;
             eta_E_p_n += cell_residual * cell_residual * fe_value_pressure.JxW(q);
-            cell_eta_E_p[output_dofs[0]] += cell_residual * cell_residual * fe_value_pressure.JxW(q);
+            cell_eta_p[output_dofs[0]] += cell_residual * cell_residual * fe_value_pressure.JxW(q);
         }
     }
     eta_t_p_n = eta_t_p_n * del_t / 3;
@@ -95,6 +95,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
     FEFaceValues<dim> fe_face_neighbor_p(fe_pressure, face_quadrature,
                                          update_values | update_gradients | update_quadrature_points | update_JxW_values);
     cell = dof_handler_pressure.begin_active();
+    cell_output = dof_handler_output.begin_active();
     for (; cell!= endc; ++cell)
     {
         for (unsigned int face_no = 0; face_no < GeometryInfo<dim>::faces_per_cell; ++face_no)
@@ -203,5 +204,5 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
     p_indicators_table.add_value("eta_flow", eta_flow.back());
     p_indicators_table.add_value("eta_jump", eta_jump.back());
     p_indicators_table.add_value("sum", eta_alg.back() + eta_time.back() +eta_flow.back() + eta_jump.back());
-    p_indicators_table.add_value("error", l2_error_p.back());
+    // p_indicators_table.add_value("error", l2_error_p.back());
 }

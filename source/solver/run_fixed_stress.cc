@@ -4,9 +4,12 @@
 using namespace std;
 void BiotSystem::run_fixed_stress()
 {
+    set_material_properties();
     make_grid();
     setup_system_eg();
-    /* Interpolate initial EG pressure */
+    if (test_case == TestCase::benchmark)
+    {
+        /* Interpolate initial EG pressure */
         // solution_pressure = 0.;
         // FEValuesExtractors::Scalar pressure_cg(0);
         // ComponentMask pressure_cg_mask = fe_pressure.component_mask(pressure_cg);
@@ -14,13 +17,28 @@ void BiotSystem::run_fixed_stress()
         VectorTools::interpolate(dof_handler_pressure,
                                  PressureSolutionEG(0),
                                  solution_pressure);
-    
-    prev_timestep_sol_pressure = solution_pressure;
-    // Initialize u_0
-    cout << "Initializing u_0" << endl;
-    assemble_system_displacement();
-    solve_displacement();
-    prev_timestep_sol_displacement = solution_displacement;
+
+        prev_timestep_sol_pressure = solution_pressure;
+        // Initialize u_0
+        cout << "Initializing u_0" << endl;
+        assemble_system_displacement();
+        solve_displacement();
+        prev_timestep_sol_displacement = solution_displacement;
+    }
+    else if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
+    { // p_0 = 0; u_0 = 0;
+        cout << "Benchmark Terzaghi : p_0 =0; u_0 = 0" << endl;
+        VectorTools::interpolate(dof_handler_pressure,
+                                 ZeroFunction<dim>(2),
+                                 solution_pressure);
+        solution_pressure = 0;
+        prev_timestep_sol_pressure = solution_pressure;
+        VectorTools::interpolate(dof_handler_displacement,
+                                 ZeroFunction<dim>(dim),
+                                 solution_displacement);
+        prev_timestep_sol_displacement = solution_displacement;
+    }
+
     for (timestep = 1; timestep < (T / del_t); timestep++)
     {
         cout << "timestep = " << timestep << endl;
@@ -28,13 +46,25 @@ void BiotSystem::run_fixed_stress()
         fixed_stress_iteration();
         // output_displacement(timestep, -1);
         // output_pressure(timestep, -1);
-        //plot_error();
-        calc_error();
-        calc_a_posteriori_indicators_p_eg();
-        calc_a_posteriori_indicators_u();
-        calc_efficiency_indices();
+        plot_error();
+        if (test_case == TestCase::benchmark || test_case == TestCase::terzaghi)
+        {
+            calc_error();
+        }
+
+        if (criteria != 3)
+        {
+            calc_a_posteriori_indicators_p_eg();
+            calc_a_posteriori_indicators_u();
+        }
+        if (test_case == TestCase::benchmark)
+        {
+            calc_efficiency_indices();
+        }
+
         prev_timestep_sol_displacement = solution_displacement;
         prev_timestep_sol_pressure = solution_pressure;
+
     }
     output_error();
 }

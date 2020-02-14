@@ -217,8 +217,8 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     u_indicators_table.add_value("eta_partial_u", eta_partial_u.back());
     u_indicators_table.add_value("eta_u", eta_u.back());
     u_indicators_table.add_value("sum", eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back()+eta_u.back());
-    u_indicators_table.add_value("error", l2_error_u.back());
-    u_indicators_table.add_value("eff", (eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back()+eta_u.back())/ l2_error_u.back() );
+    // u_indicators_table.add_value("error", l2_error_u.back());
+    // u_indicators_table.add_value("eff", (eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back()+eta_u.back())/ l2_error_u.back() );
 
     DataOut<dim> data_out;
     data_out.attach_dof_handler(dof_handler_output);

@@ -36,7 +36,7 @@ void BiotSystem::setup_system_eg()
   constraints_pressure.clear();
   constraints_pressure.reinit(relevant_set_pressure);
 
-  if (bCG_WeaklyBD == false && bNeaumannBD == false)
+  if (bCG_WeaklyBD == false )
     set_newton_bc_pressure();
 
   DoFTools::make_hanging_node_constraints(dof_handler_pressure,

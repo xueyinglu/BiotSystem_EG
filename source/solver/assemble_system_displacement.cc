@@ -2,26 +2,31 @@
 #include "DisplacementSolution.h"
 #include "InitialPressure.h"
 #include "AuxTools.h"
+#include "LambdaFunction.h"
+#include "MuFunction.h"
 using namespace std;
 void BiotSystem::assemble_system_displacement()
 {
     system_matrix_displacement.reinit(sparsity_pattern_displacement);
     system_rhs_displacement.reinit(dof_handler_displacement.n_dofs());
-    QGauss<dim> quadrature_formula(fe_displacement.degree + 1);
+    QGauss<dim> quadrature_formula(fe_displacement.degree + 2);
+    QGauss<dim - 1> face_quadrature_formula(fe_displacement.degree + 2);
 
     FEValues<dim> fe_values(fe_displacement, quadrature_formula,
                             update_values | update_gradients |
                                 update_quadrature_points | update_JxW_values);
-    // need this to access pressure solutions
+
+    FEFaceValues<dim> fe_face_values(fe_displacement, face_quadrature_formula,
+                                 update_values | update_gradients |
+                                     update_quadrature_points | update_JxW_values);
+
     FEValues<dim> fe_values_pressure(fe_pressure, quadrature_formula,
-                                     update_values |
-                                         update_quadrature_points |
-                                         update_JxW_values |
-                                         update_gradients);
+                                     update_values | update_quadrature_points |
+                                     update_JxW_values | update_gradients);
 
     const unsigned int dofs_per_cell = fe_displacement.dofs_per_cell;
     const unsigned int n_q_points = quadrature_formula.size();
-
+    const unsigned int n_face_q_points = face_quadrature_formula.size();
     FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
     Vector<double> cell_rhs(dofs_per_cell);
 
@@ -38,6 +43,8 @@ void BiotSystem::assemble_system_displacement()
     Tensor<2, dim> identity = Tensors::get_Identity<dim>();
 
     InitialPressure initial_pressure;
+    LambdaFunction lambda_function;
+    MuFunction mu_function;
     const FEValuesExtractors::Vector displacements(0);
     // Now we can begin with the loop over all cells:
     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler_displacement.begin_active(),
@@ -56,6 +63,11 @@ void BiotSystem::assemble_system_displacement()
 
         lambda.value_list(fe_values.get_quadrature_points(), lambda_values);
         mu.value_list(fe_values.get_quadrature_points(), mu_values);
+        if (test_case == heterogeneous)
+        {
+            lambda_function.value_list(fe_values.get_quadrature_points(), lambda_values);
+            mu_function.value_list(fe_values.get_quadrature_points(), mu_values);
+        }
         right_hand_side.vector_value_list(fe_values.get_quadrature_points(),
                                           rhs_values);
 
@@ -95,12 +107,37 @@ void BiotSystem::assemble_system_displacement()
 
         } // end q_point
 
+        /**************************** Neumann BC -- Traction BC *******************************/
+        // Apply traction BC on the bottom (y=0)
+        if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
+        {   
+            for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+            {   
+                if (cell->face(face)->at_boundary() &&
+                    (cell->face(face)->boundary_id() == 2))
+                {
+
+                    fe_face_values.reinit(cell, face);
+                    for (unsigned int q = 0; q < n_face_q_points; ++q)
+                    {
+                        for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                        {
+                            cell_rhs(i) += traction_bc * fe_face_values[displacements].value(i, q) * fe_face_values.JxW(q);
+                        }
+                    }
+                }
+            }
+        }
+
         cell->get_dof_indices(local_dof_indices);
         constraints_displacement.distribute_local_to_global(cell_matrix, local_dof_indices, system_matrix_displacement);
         constraints_displacement.distribute_local_to_global(cell_rhs, local_dof_indices, system_rhs_displacement);
     }
 
-    /*
+    /**************************** Dirichlet BC  *******************************/
+    if (test_case == TestCase::benchmark)
+    {
+        /*
     vector<bool> component_mask;
     component_mask.push_back(false);
     component_mask.push_back(true);
@@ -128,15 +165,48 @@ void BiotSystem::assemble_system_displacement()
                                        solution_displacement,
                                        system_rhs_displacement);
     */
+        // Apply Dirichlet BC of the true solution
+        std::map<types::global_dof_index, double> boundary_values;
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 0,
+                                                 DisplacementSolution(t),
+                                                 //ZeroFunction<dim>(dim),
+                                                 boundary_values);
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+    }
 
-    std::map<types::global_dof_index, double> boundary_values;
-    VectorTools::interpolate_boundary_values(dof_handler_displacement,
-                                             0,
-                                             DisplacementSolution(t),
-                                             //ZeroFunction<dim>(dim),
-                                             boundary_values);
-    MatrixTools::apply_boundary_values(boundary_values,
-                                       system_matrix_displacement,
-                                       solution_displacement,
-                                       system_rhs_displacement);
+    else if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
+    {
+        // apply roller BC on left and right boundary
+        vector<bool> component_mask;
+        component_mask.push_back(true);
+        component_mask.push_back(false);
+        std::map<types::global_dof_index, double> boundary_values;
+
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 1,
+                                                 ZeroFunction<dim>(dim),
+                                                 boundary_values,
+                                                 ComponentMask(component_mask));
+
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+        // apply roller BC on the top (y=H)
+        component_mask[0] = false;
+        component_mask[1] = true;
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 0,
+                                                 ZeroFunction<dim>(dim),
+                                                 boundary_values,
+                                                 ComponentMask(component_mask));
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+    }
 }

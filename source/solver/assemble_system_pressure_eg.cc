@@ -1,5 +1,6 @@
 #include "BiotSystem.h"
 #include "AuxTools.h"
+#include "PermFunction.h"
 using namespace std;
 void BiotSystem::assemble_system_pressure_eg()
 {
@@ -59,6 +60,7 @@ void BiotSystem::assemble_system_pressure_eg()
     double d_Big_K = 1; // What is this?
 
     vector<double> permeability_values(n_q_points);
+    PermFunction perm_function;
     vector<Vector<double>> prev_timestep_sol_pressure_values(n_q_points, Vector<double>(2));
     vector<Vector<double>> prev_fs_sol_pressure_values(n_q_points, Vector<double>(2));
     vector<vector<Tensor<1, dim>>> prev_timestep_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
@@ -80,6 +82,10 @@ void BiotSystem::assemble_system_pressure_eg()
         cell_rhs = 0;
         /* get the function values at current element */
         permeability.value_list(fe_value.get_quadrature_points(), permeability_values);
+        if (test_case == TestCase::heterogeneous)
+        {
+            perm_function.value_list(fe_value.get_quadrature_points(), permeability_values);
+        }
         fe_value.get_function_values(prev_timestep_sol_pressure, prev_timestep_sol_pressure_values);
         fe_value.get_function_values(prev_fs_sol_pressure, prev_fs_sol_pressure_values);
         fe_value_displacement.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_sol_grad_u_values);
@@ -105,6 +111,10 @@ void BiotSystem::assemble_system_pressure_eg()
             prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0] + prev_fs_sol_pressure_values[q][1]);
             // xueying: assign perm values
             d_Big_K = permeability.value(fe_value.quadrature_point(q), 0);
+            if (test_case == TestCase::heterogeneous)
+            {
+                d_Big_K = perm_function.value(fe_value.quadrature_point(q), 0);
+            }
             for (unsigned int i = 0; i < dofs_per_cell; i++)
             {
                 for (unsigned int j = 0; j < dofs_per_cell; j++)
@@ -278,6 +288,11 @@ void BiotSystem::assemble_system_pressure_eg()
                                 // xueying : assign perm values
                                 d_Big_K = permeability.value(fe_subface_values.quadrature_point(q), 0);
                                 d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                                if (test_case == TestCase::heterogeneous)
+                                {
+                                    d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0);
+                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                                }
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
                                     phi_i_p_face_neighbor[k] = fe_face_values_neighbor[pressure_dg].value(k, q);
@@ -376,10 +391,15 @@ void BiotSystem::assemble_system_pressure_eg()
                         d_Big_K_neighbor = 1.;
 
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
-                        {   
+                        {
                             // xueying : assign perm values
                             d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0);
                             d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                            if (test_case == TestCase::heterogeneous)
+                            {
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
+                                d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                            }
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
 
                             {
@@ -465,9 +485,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                                                         local_dof_indices_face,
                                                                         system_matrix_pressure);
 
-                    
                     } // else - no children no coarser
-                    
 
                     // CASE C) neighbor is coarser than cell
                     else
@@ -494,10 +512,15 @@ void BiotSystem::assemble_system_pressure_eg()
                         neighbor->get_dof_indices(local_dof_indices_face);
 
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
-                        {   
+                        {
                             //xueying : assign perm values
                             d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0);
                             d_Big_K_neighbor = permeability.value(fe_subface_values.quadrature_point(q), 0);
+                            if (test_case == TestCase::heterogeneous)
+                            {
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
+                                d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0);
+                            }
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
                                 phi_i_p_face_neighbor[k] = fe_subface_values[pressure_dg].value(k, q);
@@ -579,7 +602,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                                                         system_matrix_pressure);
 
                     } //coarser
-                } // else- no boundary
+                }     // else- no boundary
 
             } // for face loop
             constraints_pressure.distribute_local_to_global(cell_matrix, local_dof_indices,
@@ -596,8 +619,9 @@ void BiotSystem::assemble_system_pressure_eg()
                                              boundary_values);
     MatrixTools::apply_boundary_values(boundary_values, system_matrix_pressure, solution_pressure, system_rhs_pressure);
     */
-    if (bCG_WeaklyBD == false){
+    if (bCG_WeaklyBD == false)
+    {
         set_newton_bc_pressure();
-    } 
+    }
     system_matrix_pressure.compress(VectorOperation::add);
 }

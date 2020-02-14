@@ -15,17 +15,19 @@ class BiotSystem
 public:
     BiotSystem();
     BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol);
-    BiotSystem(string testcase, int _num_global_refinement, double _del_t, double _T);
+    BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol, int _criteria);
     // virtual BiotSystem();
     void run_fixed_stress();
     void check_disp_solver_convergence();
 
-    enum TestCase
-    {
-        none,
-        simple,
-        mandel
+    enum TestCase{
+        none, 
+        benchmark,
+        mandel,
+        terzaghi,
+        heterogeneous
     };
+
 
 private:
     double del_t = 0.01;
@@ -33,7 +35,7 @@ private:
     double t = 0;
     int timestep = 0;
     int num_global_refinement = 5;
-    double h = 1. / pow(2, num_global_refinement);
+    double h = 1./pow(2,num_global_refinement);
 
     Triangulation<dim> triangulation;
     /* EG pressure solution */
@@ -67,20 +69,25 @@ private:
     vector<double> l2_error_p;
     vector<double> l2_error_u;
     vector<double> energy_error_u;
+    vector<int> num_fs;
 
     // Data
-    double mu_f = 1;               // fluid viscosity
+    double mu_f = 1; // fluid viscosity
     RightHandSide right_hand_side; // mechanics equation body force
     InitialPressure initial_pressure;
     ConstantFunction<dim> permeability;
     ConstantFunction<dim> lambda, mu;
-
-    TestCase test_case;
+    double pressure_dirichlet_bc;
+    Tensor<1,dim> traction_bc;
+    double lame_lambda;
+    double lame_mu;
+    double perm;
+    TestCase test_case= benchmark;
     // coupling
-
+    int criteria = 3; // 1: change in mean stress; 2: change in relative mean stress; 3: a posteriori
     double biot_alpha = 0.75;
-    double K_b = 7. / 12; //K_b = lambda +2/3*mu
-    double biot_inv_M = 3. / 28;
+    double K_b = 7./12; //K_b = lambda +2/3*mu
+    double biot_inv_M = 3./28;
     double tol_fixed_stress = 1e-5;
     Vector<double> prev_timestep_sol_displacement;
     Vector<double> prev_fs_sol_displacement;
@@ -89,17 +96,16 @@ private:
     int degree = 1;
     double gamma_penal;
     double min_cell_diameter;
-    bool bNeaumannBD = false;
+    bool bNeaumannBD = true;
     bool bCG_WeaklyBD = false;
     double d_SForm = 0; //SIPG
 
     /* element-wise a posteriori error indicators*/
     DoFHandler<dim> dof_handler_output;
     FESystem<dim> fe_output;
-    Vector<double> cell_eta_time;
-    Vector<double> cell_eta_E_p;
-    Vector<double> cell_eta_E_partial_u;
-    Vector<double> cell_eta_E_u;
+    Vector<double> cell_eta_p;
+    Vector<double> cell_eta_u;
+
     /* global a posteriori error estimators (recorded for each time step) */
     vector<double> eta_fs;
     vector<double> eta_alg;
@@ -128,6 +134,7 @@ private:
     void make_grid();
     // void setup_system();
     void setup_system_eg();
+    void set_material_properties();
 
     // void assemble_system_pressure();
     void assemble_system_pressure_eg();
@@ -146,7 +153,7 @@ private:
     void output_error();
     void calc_error(); // compute the errors
     //void process_solution(int fs_count); // compute the errors
-    //  void plot_error() const;
+    void plot_error() const;
 
     void calc_a_posteriori_indicators_p_eg();
     void calc_a_posteriori_indicators_u();
