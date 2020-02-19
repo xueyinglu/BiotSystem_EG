@@ -8,6 +8,8 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     /* calculate eta_face_partial_sigma_n, eta_face_partial_sigma, eta_face_sigma_n, eta_face_sigma */
     double eta_e_partial_sigma = 0;
     double eta_e_sigma = 0;
+    double eta_e_N_partial_sigma = 0;
+    double eta_e_N_sigma = 0;
     QGauss<dim - 1> face_quadrature(fe_pressure.degree + 1);
     // const unsigned int n_face_q_points = face_quadrature.size();
     FEFaceValues<dim> fe_face_p(fe_pressure, face_quadrature,
@@ -104,30 +106,75 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                     cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_p.JxW(q);
                 }
             }
+
+            // at the traction boundary
+
+            if (cell->face(face_no)-> at_boundary() && cell ->face(face_no)->boundary_id() == 2){
+                vector<double> lambda_values(fe_face_p.n_quadrature_points);
+                vector<double> mu_values(fe_face_p.n_quadrature_points);
+                vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                fe_face_u.reinit(cell_u, face_no);
+                fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
+                fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
+                lambda.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                mu.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                if (test_case == TestCase::heterogeneous)
+                {
+                    lambda_function.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                    mu_function.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                }
+                for (unsigned int q = 0; q < fe_face_u.n_quadrature_points; q++)
+                {
+                    Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
+                    Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                    Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                    const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
+                    eta_e_N_partial_sigma += (face_sigma*n).norm_square() * fe_face_u.JxW(q);
+                    cell_eta_u[output_dofs[0]] += (face_sigma*n).norm_square() * fe_face_u.JxW(q);
+                    face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
+                    face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                    face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                    Tensor<1,dim> dum = face_sigma *n - traction_bc;
+                    eta_e_N_sigma += dum.norm_square() * fe_face_u.JxW(q);
+                    cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
+                }
+            }
         }
     }
 
     eta_e_partial_sigma = sqrt(h * eta_e_partial_sigma);
     eta_face_partial_sigma_n.push_back(eta_e_partial_sigma);
+    eta_e_N_partial_sigma = sqrt(h * eta_e_N_partial_sigma);
+    eta_N_partial_sigma_n.push_back(eta_e_N_partial_sigma);
     cout << "eta_e_partial_sigma = " << eta_e_partial_sigma << endl;
+    cout << "eta_e_N_partial_sigma = " << eta_e_N_partial_sigma << endl;
     double dum2 = 0;
     for (auto &n : eta_face_partial_sigma_n)
     {
         dum2 += n;
+   }
+    double dum5 = 0;
+    for (auto &n : eta_N_partial_sigma_n){
+        dum5 += n;
     }
-    eta_face_partial_sigma.push_back(dum2 * dum2);
+    eta_face_partial_sigma.push_back(dum2 * dum2 + dum5*dum5);
 
     eta_e_sigma *= h;
+    eta_e_N_sigma *= h;
+
     cout << "eta_e_sigma = " << eta_e_sigma << endl;
+    cout << "eta_e_N_sigma = " << eta_e_N_sigma << endl;
     if (timestep == 1)
     {
-        eta_face_sigma.push_back(eta_e_sigma);
+        eta_face_sigma.push_back(eta_e_sigma + eta_e_N_sigma);
     }
     else
     {
-        eta_face_sigma.push_back(eta_face_sigma_n.back() + eta_e_sigma);
+        eta_face_sigma.push_back(eta_face_sigma_n.back() + eta_e_sigma + eta_N_sigma_n.back() + eta_e_N_sigma);
     }
     eta_face_sigma_n.push_back(eta_e_sigma);
+    eta_N_sigma_n.push_back(eta_e_N_sigma);
 
     /* calculate eta_partial_u_n, eta_partial_u, eta_u */
 
