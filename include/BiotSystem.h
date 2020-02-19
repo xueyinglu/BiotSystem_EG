@@ -111,13 +111,18 @@ private:
     FESystem<dim> fe_output;
     Vector<double> cell_eta_p;
     Vector<double> cell_eta_u;
+    Vector<double> cell_stress_xx;
+    Vector<double> cell_stress_xy;
+    Vector<double> cell_stress_yy;
+    Vector<double> cell_strain_xx;
+    Vector<double> cell_strain_xy;
+    Vector<double> cell_strain_yy;
+    Vector<double> cell_vstrain;
 
     /* global a posteriori error estimators (recorded for each time step) */
     vector<double> eta_fs;
     vector<double> eta_alg;
     vector<double> eta_time;
-    // vector<double> eta_p_residual; // error of flow residual at time t_n
-    // vector<double> eta_flux_jump;  // error of flux jump at time t_n
     vector<double> eta_flow;
     vector<double> eta_jump;
     vector<double> eta_pen;
@@ -125,17 +130,20 @@ private:
     vector<double> eta_p_J;
 
     vector<double> eta_face_partial_sigma_n; // the errors on the tensor's time derivative for time step n
-    vector<double> eta_face_partial_sigma;   // the (cumulative in time ) errors on the tensor's time derivative_form
-    vector<double> eta_partial_u_n;          // the errors on the displacement's time derivative for time step n
-    vector<double> eta_partial_u;            // the (cumulative in time) errors on the displacement's time derivative
-    vector<double> eta_face_sigma_n;         //the errors on the tensor at time t_n;
-    vector<double> eta_face_sigma;           //the errors on the tensor at final time
-    vector<double> eta_u_n;                  // the errors on the displacement at time t_n;
-    vector<double> eta_u;                    // the errors on the displacement at final time
-    vector<double> eta_sum;                  // the sum of all error indicators
+    vector<double> eta_N_partial_sigma_n; // the errors on the tensor's time derivative on the traction boundary for time step n
+    vector<double> eta_face_partial_sigma; // the (cumulative in time ) errors on the tensor's time derivative_form
+    vector<double> eta_partial_u_n; // the errors on the displacement's time derivative for time step n
+    vector<double> eta_partial_u; // the (cumulative in time) errors on the displacement's time derivative
+    vector<double> eta_face_sigma_n; //the errors on the tensor at time t_n;
+    vector<double> eta_N_sigma_n; // the errors on the tensor at the traction bc at time step n
+    vector<double> eta_face_sigma; //the errors on the tensor at final time
+    vector<double> eta_u_n; // the errors on the displacement at time t_n; 
+    vector<double> eta_u; // the errors on the displacement at final time
+    vector<double> eta_sum; // the sum of all error indicators
     ConvergenceTable p_indicators_table;
     ConvergenceTable u_indicators_table;
     ConvergenceTable efficiency_table;
+
 
     void make_grid();
     // void setup_system();
@@ -161,6 +169,7 @@ private:
     //void process_solution(int fs_count); // compute the errors
     void plot_error() const;
 
+    void calc_strain_stress();    
     void calc_a_posteriori_indicators_p_eg();
     void calc_a_posteriori_indicators_u();
 

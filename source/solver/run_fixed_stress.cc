@@ -61,7 +61,7 @@ void BiotSystem::run_fixed_stress()
         {
             calc_efficiency_indices();
         }
-
+        calc_strain_stress();
         prev_timestep_sol_displacement = solution_displacement;
         prev_timestep_sol_pressure = solution_pressure;
 

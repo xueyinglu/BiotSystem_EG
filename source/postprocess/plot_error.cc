@@ -76,7 +76,7 @@ void BiotSystem::plot_error() const
     sol_names.push_back("P_DG");
     data_out.add_data_vector(solution_pressure, sol_names);
     data_out.build_patches();
-    ofstream output("visual/sol-p-" + std::to_string(timestep) + ".vtk");
+    ofstream output("visual/sol-eg-p-" + std::to_string(timestep) + ".vtk");
     data_out.write_vtk(output); 
     DataOut<dim> data_out_u;
     data_out_u.attach_dof_handler(dof_handler_displacement);

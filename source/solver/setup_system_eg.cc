@@ -36,7 +36,7 @@ void BiotSystem::setup_system_eg()
   constraints_pressure.clear();
   constraints_pressure.reinit(relevant_set_pressure);
 
-  if (bCG_WeaklyBD == false )
+  if (bCG_WeaklyBD == false)
     set_newton_bc_pressure();
 
   DoFTools::make_hanging_node_constraints(dof_handler_pressure,
@@ -83,4 +83,13 @@ void BiotSystem::setup_system_eg()
   dof_handler_output.distribute_dofs(fe_output);
   cell_eta_p.reinit(dof_handler_output.n_dofs());
   cell_eta_u.reinit(dof_handler_output.n_dofs());
+  cell_eta_p.reinit(dof_handler_output.n_dofs());
+  cell_eta_u.reinit(dof_handler_output.n_dofs());
+  cell_stress_xx.reinit(dof_handler_output.n_dofs());
+  cell_stress_xy.reinit(dof_handler_output.n_dofs());
+  cell_stress_yy.reinit(dof_handler_output.n_dofs());
+  cell_strain_xx.reinit(dof_handler_output.n_dofs());
+  cell_strain_xy.reinit(dof_handler_output.n_dofs());
+  cell_strain_yy.reinit(dof_handler_output.n_dofs());
+  cell_vstrain.reinit(dof_handler_output.n_dofs());
 }
