@@ -77,13 +77,14 @@ private:
     // Data
     double mu_f = 1; // fluid viscosity
     RightHandSide right_hand_side; // mechanics equation body force
-    InitialPressure initial_pressure;
+    // InitialPressure initial_pressure;
     ConstantFunction<dim> permeability;
     ConstantFunction<dim> lambda, mu;
     PermFunction perm_function;
     LambdaFunction lambda_function;
     MuFunction mu_function;
     double pressure_dirichlet_bc;
+    double initial_pressure;
     Tensor<1,dim> traction_bc;
     double lame_lambda;
     double lame_mu;

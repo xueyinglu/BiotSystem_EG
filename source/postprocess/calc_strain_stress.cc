@@ -56,14 +56,14 @@ void BiotSystem::calc_strain_stress()
     }
     DataOut<dim> data_out;
     data_out.attach_dof_handler(dof_handler_output);
-    data_out.add_data_vector(cell_stress_xx, "stress_xx", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_stress_xy, "stress_xy", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_stress_yy, "stress_yy", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_strain_xx, "strain_xx", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_strain_xy, "strain_xy", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_strain_yy, "strain_yy", DataOut<dim>::type_dof_data);
-    data_out.add_data_vector(cell_vstrain, "vstrain", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_stress_xx, "eg_stress_xx", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_stress_xy, "eg_stress_xy", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_stress_yy, "eg_stress_yy", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_strain_xx, "eg_strain_xx", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_strain_xy, "eg_strain_xy", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_strain_yy, "eg_strain_yy", DataOut<dim>::type_dof_data);
+    data_out.add_data_vector(cell_vstrain, "eg_vstrain", DataOut<dim>::type_dof_data);
     data_out.build_patches();
-    ofstream output("visual/stress" + to_string(timestep) + ".vtk");
+    ofstream output("visual/eg-stress" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);
 }

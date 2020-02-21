@@ -25,17 +25,30 @@ void BiotSystem::run_fixed_stress()
         solve_displacement();
         prev_timestep_sol_displacement = solution_displacement;
     }
-    else if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
+    else if (test_case == TestCase::terzaghi )
     { // p_0 = 0; u_0 = 0;
         cout << "Benchmark Terzaghi : p_0 =0; u_0 = 0" << endl;
         VectorTools::interpolate(dof_handler_pressure,
                                  ZeroFunction<dim>(2),
                                  solution_pressure);
-        solution_pressure = 0;
         prev_timestep_sol_pressure = solution_pressure;
         VectorTools::interpolate(dof_handler_displacement,
                                  ZeroFunction<dim>(dim),
                                  solution_displacement);
+        prev_timestep_sol_displacement = solution_displacement;
+    }
+    else if (test_case == TestCase::heterogeneous){
+       cout << "heterogeneous test" << endl;
+       vector<double> eg_initial_p;
+       eg_initial_p.push_back(initial_pressure);
+       eg_initial_p.push_back(0.);
+        VectorTools::interpolate(dof_handler_pressure,
+                                 ConstantFunction<dim>(eg_initial_p),
+                                 solution_pressure);
+        prev_timestep_sol_pressure = solution_pressure;
+        cout << "Initializing u_0" << endl;
+        assemble_system_displacement();
+        solve_displacement();
         prev_timestep_sol_displacement = solution_displacement;
     }
 

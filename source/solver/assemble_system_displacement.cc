@@ -15,12 +15,12 @@ void BiotSystem::assemble_system_displacement()
                                 update_quadrature_points | update_JxW_values);
 
     FEFaceValues<dim> fe_face_values(fe_displacement, face_quadrature_formula,
-                                 update_values | update_gradients |
-                                     update_quadrature_points | update_JxW_values);
+                                     update_values | update_gradients |
+                                         update_quadrature_points | update_JxW_values);
 
     FEValues<dim> fe_values_pressure(fe_pressure, quadrature_formula,
                                      update_values | update_quadrature_points |
-                                     update_JxW_values | update_gradients);
+                                         update_JxW_values | update_gradients);
 
     const unsigned int dofs_per_cell = fe_displacement.dofs_per_cell;
     const unsigned int n_q_points = quadrature_formula.size();
@@ -99,6 +99,12 @@ void BiotSystem::assemble_system_displacement()
                 cell_rhs(i) += biot_alpha * (pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]) * trace(phi_i_grads_u[i]) * fe_values.JxW(q);
                 // cell_rhs(i) += 0.75 * pore_pressure_values[q] * trace(phi_i_grads_u[i]) *fe_values.JxW(q);
                 // cell_rhs(i) -= biot_alpha * (grad_p_values[q]*phi_i_u[i])*fe_values.JxW(q);
+                double check = ((pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]))/ pore_pressure_values_eg[q][0];
+                if (check > 1.0001)
+                {
+                    cout << "checking"
+                         << "(cg+dg)/cg =" << check << endl;
+                }
             }
 
         } // end q_point
@@ -106,9 +112,9 @@ void BiotSystem::assemble_system_displacement()
         /**************************** Neumann BC -- Traction BC *******************************/
         // Apply traction BC on the bottom (y=0)
         if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
-        {   
+        {
             for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
-            {   
+            {
                 if (cell->face(face)->at_boundary() &&
                     (cell->face(face)->boundary_id() == 2))
                 {

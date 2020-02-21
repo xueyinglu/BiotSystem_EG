@@ -31,7 +31,7 @@ BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, dou
     test_case = TestCase::heterogeneous;
     tol_fixed_stress = _fs_tol;
     min_cell_diameter = h;
-    gamma_penal = 100;
+    gamma_penal = 1;
     criteria = 1;
 }
 

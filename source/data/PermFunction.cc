@@ -9,5 +9,11 @@ double PermFunction::value(const Point<dim> &p, const unsigned int component) co
     if (x >= 0.1 && x <=0.9 && y >= 0.5- 1./64 && y <= 0.5+ 1./64){
         k=10;
     }
+        if (x >= 0.1 && x <=0.9 && y >= 0.25- 1./64 && y <= 0.25+ 1./64){
+        k=10;
+    }
+        if (x >= 0.1 && x <=0.9 && y >= 0.75- 1./64 && y <= 0.75+ 1./64){
+        k=10;
+    }
     return k;
 }
