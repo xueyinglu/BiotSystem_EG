@@ -622,4 +622,5 @@ void BiotSystem::assemble_system_pressure_eg()
         set_newton_bc_pressure();
     }
     system_matrix_pressure.compress(VectorOperation::add);
+    system_rhs_pressure.compress(VectorOperation::add);
 }
