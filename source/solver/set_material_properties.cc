@@ -35,9 +35,9 @@ void BiotSystem::set_material_properties(){
         lame_mu = E/2/ (1+nu);
 
         traction_bc[0] =0;
-        traction_bc[1] = 1e3;
-        pressure_dirichlet_bc = 0;
-        initial_pressure = 1000;
+        traction_bc[1] = 2000;
+        pressure_dirichlet_bc = 2000;
+        initial_pressure = 2000;
         biot_alpha = 1;
         mu_f = 1;
         K_b = lame_lambda + 2./3 * lame_mu;
