@@ -307,6 +307,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                     d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0);
                                     d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
                                 }
+                                // ADDED harmonic averaging of perm in the penalty term
                                 double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
