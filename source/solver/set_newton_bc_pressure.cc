@@ -2,14 +2,13 @@
 
 void BiotSystem::set_newton_bc_pressure()
 {
+    std::vector<bool> component_mask(2, false);
+    component_mask[0] = true;
+    component_mask[1] = false;
     if (test_case == TestCase::benchmark)
     {
 
         cout << "    :  Set Benchmark BC PRESSURE " << std::endl;
-
-        std::vector<bool> component_mask(2, false);
-        component_mask[0] = true;
-        component_mask[1] = false;
 
         VectorTools::interpolate_boundary_values(dof_handler_pressure,
                                                  0,
@@ -51,7 +50,8 @@ void BiotSystem::set_newton_bc_pressure()
         VectorTools::interpolate_boundary_values(dof_handler_pressure,
                                                  2,
                                                  ConstantFunction<dim>(eg_p_bc),
-                                                 constraints_pressure);
+                                                 constraints_pressure,
+                                                 component_mask);
         /*
         eg_p_bc[0] = initial_pressure;
         VectorTools::interpolate_boundary_values(dof_handler_pressure,

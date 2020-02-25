@@ -147,7 +147,22 @@ void BiotSystem::assemble_system_pressure_eg()
                 //    (fe_value.shape_value(i, q) * // phi_i(x_q)
                 //     1 *                          // f(x_q)
                 //     fe_value.JxW(q));            // dx
-
+                if (test_case == TestCase::heterogeneous)
+                {
+                    // add a well term
+                    Point<2> well1 = Point<2>(0.5, 0.25 - 1. / 128);
+                    Point<2> well2 = Point<2>(0.5, 0.5 - 1. / 128);
+                    Point<2> well3 = Point<2>(0.5, 0.75 - 1. / 128);
+                    if (fe_value.quadrature_point(q).distance(well1) < 1. / 128 ||
+                        fe_value.quadrature_point(q).distance(well2) < 1. / 128 ||
+                        fe_value.quadrature_point(q).distance(well3) < 1. / 128)
+                    {
+                        cell_rhs(i) +=
+                            (fe_value.shape_value(i, q) * // phi_i(x_q)
+                             -2000 *                      // f(x_q)
+                             fe_value.JxW(q));            // dx
+                    }
+                }
                 // prev time step
                 cell_rhs(i) +=
                     ((biot_inv_M + biot_alpha * biot_alpha / K_b) / del_t * // (1/M + alpha^2/K_b)/del_t
@@ -170,27 +185,27 @@ void BiotSystem::assemble_system_pressure_eg()
                 // On the Boundary
                 if (cell->at_boundary(face_no))
                 {
-
-                    fe_face_values.reinit(cell, face_no);
-
-                    for (unsigned int q = 0; q < n_face_q_points; ++q)
+                    // Weakly impose Dirichlet BC where the boundary indicator is 0
+                    if (cell->face(face_no)->boundary_indicator() == 2)
                     {
-                        for (unsigned int k = 0; k < dofs_per_cell; ++k)
+                        fe_face_values.reinit(cell, face_no);
+
+                        for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
-                            phi_i_p_face[k] = fe_face_values[pressure_dg].value(k, q);
-                            phi_i_grads_p_face[k] = fe_face_values[pressure_dg].gradient(k, q);
-
-                            phi_i_p_face_cg[k] = fe_face_values[pressure_cg].value(k, q);
-                            phi_i_grads_p_face_cg[k] = fe_face_values[pressure_cg].gradient(k, q);
-                        }
-
-                        for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                            for (unsigned int j = 0; j < dofs_per_cell; ++j)
+                            for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
+                                phi_i_p_face[k] = fe_face_values[pressure_dg].value(k, q);
+                                phi_i_grads_p_face[k] = fe_face_values[pressure_dg].gradient(k, q);
 
-                                //if(cell->face(face_no)->boundary_indicator() == 1 || cell->face(face_no)->boundary_indicator() == 2 ){
-                                if (bNeaumannBD == false)
+                                phi_i_p_face_cg[k] = fe_face_values[pressure_cg].value(k, q);
+                                phi_i_grads_p_face_cg[k] = fe_face_values[pressure_cg].gradient(k, q);
+                            }
+
+                            for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                            {
+                                for (unsigned int j = 0; j < dofs_per_cell; ++j)
                                 {
+
                                     if (bCG_WeaklyBD)
                                     {
                                         //(0,0) - CG Weakly imposed BD
@@ -203,7 +218,7 @@ void BiotSystem::assemble_system_pressure_eg()
 
                                         //(0,0) - CG Weakly imposed BD
                                         // I-4
-                                        cell_matrix(i, j) += penalty_term * (phi_i_p_face_cg[j]) * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
+                                        cell_matrix(i, j) += penalty_term * d_Big_K * (phi_i_p_face_cg[j]) * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
                                     }
                                     //DG - Weakly imposed BD
                                     //(1,1)
@@ -216,7 +231,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                     //DG - Weakly imposed BD
                                     //(1,1)
                                     // I-D-1
-                                    cell_matrix(i, j) += penalty_term * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += penalty_term * d_Big_K * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     // EG - Weakly Imposed BD.
                                     //(0,1)
@@ -227,26 +242,27 @@ void BiotSystem::assemble_system_pressure_eg()
                                     cell_matrix(i, j) += -d_SForm * d_Big_K * phi_i_grads_p_face_cg[i] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                     //I-E-4
-                                    cell_matrix(i, j) += penalty_term * fe_face_values[pressure_cg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += penalty_term * d_Big_K * fe_face_values[pressure_cg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //I-E-5
-                                    cell_matrix(i, j) += penalty_term * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += penalty_term * d_Big_K * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
 
-                                } // boundary indicator
-                                else
-                                {
+                                } //int i.j
 
-                                    //If bNeaumnn Bondary.
-                                    //Do nothing on the Boundary.
-                                }
+                                // I-E-2  &  I-E-3
+                                cell_rhs(i) += -d_SForm * d_Big_K * pressure_dirichlet_bc // CG
+                                               * fe_face_values.normal_vector(q) * fe_face_values[pressure_cg].gradient(i, q) * fe_face_values.JxW(q);
 
-                                //else if(cell->face(face_no)->boundary_indicator() == 0){
-                                //Do nothing on the Boundary.
-                                //}
-
-                            } //int i.j
-                    }         //for q
-                }             // cell - at_boundary
+                                //(0,0) - EG Weakly imposed BD.
+                                // I-E-4
+                                cell_rhs(i) += penalty_term * d_Big_K * pressure_dirichlet_bc // - neighbor_pressure_boundary_term[q])
+                                               * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                cell_rhs(i) += penalty_term * d_Big_K * pressure_dirichlet_bc // - neighbor_pressure_boundary_term[q])
+                                               * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
+                            }
+                        } //for q
+                    }
+                } // cell - at_boundary
                 // On the Interface
                 else
                 {
@@ -291,6 +307,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                     d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0);
                                     d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
                                 }
+                                double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
                                     phi_i_p_face_neighbor[k] = fe_face_values_neighbor[pressure_dg].value(k, q);
@@ -348,13 +365,13 @@ void BiotSystem::assemble_system_pressure_eg()
 
                                         //(1,1)
                                         // H-3
-                                        cell_matrix(i, j) += penalty_term * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix(i, j) += penalty_term * K_e * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
                                         // Newly DEBUG
                                         // Different Matrix, Diffeernt Global Case,
                                         // I = K, J = L
                                         //H-N-3
-                                        cell_matrix_face(i, j) += -penalty_term * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix_face(i, j) += -penalty_term * K_e * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
                                         //These terms are ZERO in EG
                                         cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
@@ -398,6 +415,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                 d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
                                 d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
                             }
+                            double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
 
                             {
@@ -460,13 +478,13 @@ void BiotSystem::assemble_system_pressure_eg()
 
                                     //(1,1)
                                     //H-3
-                                    cell_matrix(i, j) += penalty_term * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += penalty_term * K_e * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     // Newly DEBUG
                                     // Different Matrix, Diffeernt Global Case,
                                     // I = K, J = L
                                     //H-N-3
-                                    cell_matrix_face(i, j) += -penalty_term * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += -penalty_term * K_e * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //These terms are ZERO in EG
                                     cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
@@ -519,6 +537,7 @@ void BiotSystem::assemble_system_pressure_eg()
                                 d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
                                 d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0);
                             }
+                            double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
                                 phi_i_p_face_neighbor[k] = fe_subface_values[pressure_dg].value(k, q);
@@ -576,13 +595,13 @@ void BiotSystem::assemble_system_pressure_eg()
 
                                     //(1,1)
                                     //H-3
-                                    cell_matrix(i, j) += penalty_term * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += penalty_term * K_e * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     // Newly DEBUG
                                     // Different Matrix, Diffeernt Global Case,
                                     // I = K, J = L
                                     //H-N-3
-                                    cell_matrix_face(i, j) += -penalty_term * fe_subface_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += -penalty_term * K_e * fe_subface_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //These terms are ZERO in EG
                                     cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
@@ -617,10 +636,6 @@ void BiotSystem::assemble_system_pressure_eg()
                                              boundary_values);
     MatrixTools::apply_boundary_values(boundary_values, system_matrix_pressure, solution_pressure, system_rhs_pressure);
     */
-    if (bCG_WeaklyBD == false)
-    {
-        set_newton_bc_pressure();
-    }
     system_matrix_pressure.compress(VectorOperation::add);
     system_rhs_pressure.compress(VectorOperation::add);
 }

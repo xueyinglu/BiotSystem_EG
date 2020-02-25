@@ -103,8 +103,7 @@ private:
     int degree = 1;
     double gamma_penal;
     double min_cell_diameter;
-    bool bNeaumannBD = true;
-    bool bCG_WeaklyBD = false;
+    bool bCG_WeaklyBD = true;
     double d_SForm = 0; //SIPG
 
     /* element-wise a posteriori error indicators*/
