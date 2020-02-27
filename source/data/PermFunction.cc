@@ -20,7 +20,7 @@ double PermFunction::value(const Point<dim> &p, const unsigned int component) co
     }
     /*
     if (y<=0.5){
-        k=1e-4;
+        k=1e-11;
     }
     */
     return k;
