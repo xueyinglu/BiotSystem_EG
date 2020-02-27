@@ -49,7 +49,7 @@ private:
     ConstraintMatrix constraints_pressure;
 
     LA::MPI::BlockSparseMatrix system_matrix_pressure;
-    LA::MPI::BlockVector solution_pressure, prev_timestep_sol_pressure, prev_fs_sol_pressure;
+    LA::MPI::BlockVector solution_pressure, initial_pressure, prev_timestep_sol_pressure, prev_fs_sol_pressure;
     LA::MPI::BlockVector system_rhs_pressure;
     std::vector<IndexSet> partition_pressure;
     std::vector<IndexSet> partition_relevant_pressure;
@@ -66,6 +66,7 @@ private:
     SparseMatrix<double> system_matrix_displacement;
 
     Vector<double> solution_displacement;
+    Vector<double> initial_displacement;
     Vector<double> system_rhs_displacement;
     ConvergenceTable convergence_table;
 
@@ -77,18 +78,14 @@ private:
     // Data
     double mu_f = 1; // fluid viscosity
     RightHandSide right_hand_side; // mechanics equation body force
-    // InitialPressure initial_pressure;
     ConstantFunction<dim> permeability;
     ConstantFunction<dim> lambda, mu;
     PermFunction perm_function;
     LambdaFunction lambda_function;
     MuFunction mu_function;
     double pressure_dirichlet_bc;
-    double initial_pressure;
+    double initial_pressure_value;
     Tensor<1,dim> traction_bc;
-    double lame_lambda;
-    double lame_mu;
-    double perm;
     TestCase test_case= benchmark;
     // coupling
     int criteria = 3; // 1: change in mean stress; 2: change in relative mean stress; 3: a posteriori
@@ -154,7 +151,6 @@ private:
     void assemble_system_pressure_eg();
     void assemble_system_displacement();
 
-    void set_newton_bc_pressure();
     void solve_pressure_eg();
     void solve_displacement();
 

@@ -40,7 +40,7 @@ void BiotSystem::run_fixed_stress()
     else if (test_case == TestCase::heterogeneous){
        cout << "heterogeneous test" << endl;
        vector<double> eg_initial_p;
-       eg_initial_p.push_back(initial_pressure);
+       eg_initial_p.push_back(initial_pressure_value);
        eg_initial_p.push_back(0.);
         VectorTools::interpolate(dof_handler_pressure,
                                  ConstantFunction<dim>(eg_initial_p),

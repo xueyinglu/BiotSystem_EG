@@ -99,12 +99,7 @@ void BiotSystem::assemble_system_displacement()
                 cell_rhs(i) += biot_alpha * (pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]) * trace(phi_i_grads_u[i]) * fe_values.JxW(q);
                 // cell_rhs(i) += 0.75 * pore_pressure_values[q] * trace(phi_i_grads_u[i]) *fe_values.JxW(q);
                 // cell_rhs(i) -= biot_alpha * (grad_p_values[q]*phi_i_u[i])*fe_values.JxW(q);
-                double check = ((pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]))/ pore_pressure_values_eg[q][0];
-                if (check > 1.0001)
-                {
-                    cout << "checking"
-                         << "(cg+dg)/cg =" << check << endl;
-                }
+                // double check = ((pore_pressure_values_eg[q][0] + pore_pressure_values_eg[q][1]))/ pore_pressure_values_eg[q][0];
             }
 
         } // end q_point

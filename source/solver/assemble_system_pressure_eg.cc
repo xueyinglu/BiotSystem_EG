@@ -108,10 +108,10 @@ void BiotSystem::assemble_system_pressure_eg()
             prev_timestep_mean_stress = K_b * prev_time_div_u - biot_alpha * (prev_timestep_sol_pressure_values[q][0] + prev_timestep_sol_pressure_values[q][1]);
             prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0] + prev_fs_sol_pressure_values[q][1]);
             // xueying: assign perm values
-            d_Big_K = permeability.value(fe_value.quadrature_point(q), 0);
+            d_Big_K = permeability.value(fe_value.quadrature_point(q), 0)/mu_f;
             if (test_case == TestCase::heterogeneous)
             {
-                d_Big_K = perm_function.value(fe_value.quadrature_point(q), 0);
+                d_Big_K = perm_function.value(fe_value.quadrature_point(q), 0)/mu_f;
             }
             for (unsigned int i = 0; i < dofs_per_cell; i++)
             {
@@ -147,6 +147,7 @@ void BiotSystem::assemble_system_pressure_eg()
                 //    (fe_value.shape_value(i, q) * // phi_i(x_q)
                 //     1 *                          // f(x_q)
                 //     fe_value.JxW(q));            // dx
+                
                 if (test_case == TestCase::heterogeneous)
                 {
                     // add a well term
@@ -159,10 +160,11 @@ void BiotSystem::assemble_system_pressure_eg()
                     {
                         cell_rhs(i) +=
                             (fe_value.shape_value(i, q) * // phi_i(x_q)
-                             -20000 *                      // f(x_q)
+                             -20 *                     // f(x_q)
                              fe_value.JxW(q));            // dx
                     }
                 }
+                
                 // prev time step
                 cell_rhs(i) +=
                     ((biot_inv_M + biot_alpha * biot_alpha / K_b) / del_t * // (1/M + alpha^2/K_b)/del_t
@@ -300,15 +302,16 @@ void BiotSystem::assemble_system_pressure_eg()
                             {
                                 //for (unsigned int q=0; q<n_face_q_points; ++q){
                                 // xueying : assign perm values
-                                d_Big_K = permeability.value(fe_subface_values.quadrature_point(q), 0);
-                                d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                                d_Big_K = permeability.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
+                                d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
                                 if (test_case == TestCase::heterogeneous)
                                 {
-                                    d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0);
-                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                                    d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
+                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
                                 }
                                 // ADDED harmonic averaging of perm in the penalty term
                                 double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                                double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
                                     phi_i_p_face_neighbor[k] = fe_face_values_neighbor[pressure_dg].value(k, q);
@@ -325,60 +328,25 @@ void BiotSystem::assemble_system_pressure_eg()
                                     for (unsigned int j = 0; j < dofs_per_cell; ++j)
                                     {
 
-                                        //(1,0)
-                                        //H-1
-                                        cell_matrix(i, j) += -0.5 * d_Big_K * phi_i_grads_p_face_cg[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * phi_i_grads_p_face_cg[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        //(0,1) - for SIPG
-                                        //H-2
-                                        //DEBUG May1. -- need to fix
-                                        //cell_matrix(i,j) += -  d_SForm
-                                        //  *  0.5 * d_Big_K
-                                        //  *  fe_subface_values[pressure_dg].gradient(i,q)
-                                        //  *  fe_subface_values.normal_vector(q)
-                                        //  *  phi_i_p_face_cg[j]
-                                        //  *  fe_subface_values.JxW(q);
-                                        cell_matrix(i, j) += -d_SForm * 0.5 * d_Big_K * phi_i_grads_p_face_cg[i] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
+                                        cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * phi_i_grads_p_face_cg[i] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
 
-                                        //Newly Debug
-                                        //Different Matrix, Different Global Case
-                                        // I = K, J=L
+                                        cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        //H-N-1
-                                        cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix_face(i, j) += d_SForm * (1 - beta_e) * d_Big_K * phi_i_grads_p_face_cg[i] * fe_subface_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
 
-                                        //H-N-2
-                                        //DEBUG May1. -- need to fix
-                                        //cell_matrix_face(i,j) +=  0.5
-                                        //  * d_SForm
-                                        //  * d_Big_K
-                                        //  * fe_subface_values[pressure_dg].gradient(i,q)
-                                        //  * fe_subface_values.normal_vector(q)
-                                        //  * fe_face_values_neighbor[pressure_cg].value(j,q) * fe_subface_values.JxW(q);
-                                        cell_matrix_face(i, j) += d_SForm * 0.5 * d_Big_K * phi_i_grads_p_face_cg[i] * fe_subface_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
+                                        cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * fe_subface_values[pressure_dg].gradient(j, q) * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        //(1,1) - DG
-                                        //These terms are ZERO in EG
-                                        cell_matrix(i, j) += -0.5 * d_Big_K * fe_subface_values[pressure_dg].gradient(j, q) * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * fe_subface_values[pressure_dg].gradient(i, q) * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
 
-                                        //These terms are ZERO in EG
-                                        cell_matrix(i, j) += -0.5 * d_SForm * d_Big_K * fe_subface_values[pressure_dg].gradient(i, q) * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
-
-                                        //(1,1)
-                                        // H-3
                                         cell_matrix(i, j) += penalty_term * K_e * fe_subface_values[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        // Newly DEBUG
-                                        // Different Matrix, Diffeernt Global Case,
-                                        // I = K, J = L
-                                        //H-N-3
                                         cell_matrix_face(i, j) += -penalty_term * K_e * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        //These terms are ZERO in EG
-                                        cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
+                                        cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_subface_values.normal_vector(q) * fe_subface_values[pressure_dg].value(i, q) * fe_subface_values.JxW(q);
 
-                                        //These terms are ZERO in EG
-                                        cell_matrix_face(i, j) += 0.5 * d_SForm * d_Big_K * fe_subface_values[pressure_dg].gradient(i, q) * fe_subface_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
+                                        cell_matrix_face(i, j) += d_SForm * (1 - beta_e) * d_Big_K * fe_subface_values[pressure_dg].gradient(i, q) * fe_subface_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_subface_values.JxW(q);
 
                                     } //int J
 
@@ -409,14 +377,15 @@ void BiotSystem::assemble_system_pressure_eg()
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
                             // xueying : assign perm values
-                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0);
-                            d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0)/mu_f;
+                            d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
                             if (test_case == TestCase::heterogeneous)
                             {
-                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
-                                d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0);
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0)/mu_f;
+                                d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                            double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
 
                             {
@@ -435,63 +404,27 @@ void BiotSystem::assemble_system_pressure_eg()
                                 for (unsigned int j = 0; j < dofs_per_cell; ++j)
                                 {
 
-                                    //(1,0)
-                                    //H-1
-                                    cell_matrix(i, j) += -0.5 * d_Big_K * phi_i_grads_p_face_cg[j] // + phi_i_grads_p_face_neighbor_cg[j])
+                                    cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * phi_i_grads_p_face_cg[j] // + phi_i_grads_p_face_neighbor_cg[j])
                                                          * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    //(0,1) - for SIPG
-                                    //H-2
-                                    //DEBUG May1. -- need to fix
-                                    //cell_matrix(i,j) += -  d_SForm
-                                    //* 0.5 * d_Big_K
-                                    //* fe_face_values[pressure_dg].gradient(i,q)
-                                    //* fe_face_values.normal_vector(q)
-                                    //* phi_i_p_face_cg[j]
-                                    //* fe_face_values.JxW(q);
-                                    cell_matrix(i, j) += -d_SForm * 0.5 * d_Big_K * phi_i_grads_p_face_cg[i] // + phi_i_grads_p_face_neighbor_cg[j])
+                                    cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * phi_i_grads_p_face_cg[i] // + phi_i_grads_p_face_neighbor_cg[j])
                                                          * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
-                                    //Newly Debug
-                                    //Different Matrix, Different Global Case
-                                    // I = K, J=L
+                                    cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    //H-N-1
-                                    cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += d_SForm * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[i] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
-                                    //H-N-2
-                                    //DEBUG May1. -- need to fix
-                                    //cell_matrix_face(i,j) +=  0.5 * d_SForm
-                                    //*  d_Big_K
-                                    //*  fe_face_values[pressure_dg].gradient(i,q)
-                                    //*  fe_face_values.normal_vector(q)
-                                    //*  fe_face_values_neighbor[pressure_cg].value(j,q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(j, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    // DEBUGGED AUG 6
-                                    cell_matrix_face(i, j) += d_SForm * 0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[i] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
-                                    //(1,1) - DG
-                                    //These terms are ZERO in EG
-                                    cell_matrix(i, j) += -0.5 * d_Big_K * fe_face_values[pressure_dg].gradient(j, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
-
-                                    //These terms are ZERO in EG
-                                    cell_matrix(i, j) += -0.5 * d_SForm * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
-
-                                    //(1,1)
-                                    //H-3
                                     cell_matrix(i, j) += penalty_term * K_e * fe_face_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    // Newly DEBUG
-                                    // Different Matrix, Diffeernt Global Case,
-                                    // I = K, J = L
-                                    //H-N-3
                                     cell_matrix_face(i, j) += -penalty_term * K_e * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    //These terms are ZERO in EG
-                                    cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
-                                    //These terms are ZERO in EG
-                                    cell_matrix_face(i, j) += 0.5 * d_SForm * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values_neighbor[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                 } // For J loop
 
@@ -531,14 +464,15 @@ void BiotSystem::assemble_system_pressure_eg()
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
                             //xueying : assign perm values
-                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0);
-                            d_Big_K_neighbor = permeability.value(fe_subface_values.quadrature_point(q), 0);
+                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0)/mu_f;
+                            d_Big_K_neighbor = permeability.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
                             if (test_case == TestCase::heterogeneous)
                             {
-                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0);
-                                d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0);
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0)/mu_f;
+                                d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                            double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
                                 phi_i_p_face_neighbor[k] = fe_subface_values[pressure_dg].value(k, q);
@@ -557,7 +491,7 @@ void BiotSystem::assemble_system_pressure_eg()
 
                                     //(1,0)
                                     //H-1
-                                    cell_matrix(i, j) += -0.5 * d_Big_K * (phi_i_grads_p_face_cg[j]) // + phi_i_grads_p_face_neighbor_cg[j])
+                                    cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * (phi_i_grads_p_face_cg[j]) // + phi_i_grads_p_face_neighbor_cg[j])
                                                          * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //(0,1) - for SIPG
@@ -569,14 +503,14 @@ void BiotSystem::assemble_system_pressure_eg()
                                     //* fe_face_values.normal_vector(q)
                                     //* phi_i_p_face_cg[j]
                                     //* fe_face_values.JxW(q);
-                                    cell_matrix(i, j) += -d_SForm * 0.5 * d_Big_K * fe_face_values[pressure_cg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_cg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                     //Newly Debug
                                     //Different Matrix, Different Global Case
                                     // I = K, J=L
 
                                     //H-N-1
-                                    cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor_cg[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //H-N-2
                                     //DEBUG May1. -- need to fix
@@ -585,14 +519,14 @@ void BiotSystem::assemble_system_pressure_eg()
                                     //*  fe_face_values[pressure_dg].gradient(i,q)
                                     //*  fe_face_values.normal_vector(q)
                                     //*  fe_face_values_neighbor[pressure_cg].value(j,q) * fe_face_values.JxW(q);
-                                    cell_matrix_face(i, j) += d_SForm * 0.5 * d_Big_K * fe_face_values[pressure_cg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_cg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                     //(1,1) - DG
                                     //These terms are ZERO in EG
-                                    cell_matrix(i, j) += -0.5 * d_Big_K * fe_face_values[pressure_dg].gradient(j, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += -(1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(j, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //These terms are ZERO in EG
-                                    cell_matrix(i, j) += -0.5 * d_SForm * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix(i, j) += -d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                     //(1,1)
                                     //H-3
@@ -605,10 +539,10 @@ void BiotSystem::assemble_system_pressure_eg()
                                     cell_matrix_face(i, j) += -penalty_term * K_e * fe_subface_values[pressure_dg].value(j, q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //These terms are ZERO in EG
-                                    cell_matrix_face(i, j) += -0.5 * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += -beta_e * d_Big_K_neighbor * phi_i_grads_p_face_neighbor[j] * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
 
                                     //These terms are ZERO in EG
-                                    cell_matrix_face(i, j) += 0.5 * d_SForm * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
+                                    cell_matrix_face(i, j) += d_SForm * (1 - beta_e) * d_Big_K * fe_face_values[pressure_dg].gradient(i, q) * fe_face_values.normal_vector(q) * fe_subface_values[pressure_dg].value(j, q) * fe_face_values.JxW(q);
 
                                 } // For J loop
 
