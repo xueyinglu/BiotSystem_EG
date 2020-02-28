@@ -31,8 +31,9 @@ BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, dou
     test_case = TestCase::heterogeneous;
     tol_fixed_stress = _fs_tol;
     min_cell_diameter = h;
-    gamma_penal = 10;
+    gamma_penal = 1;
     criteria = 1;
+    adaptivity = true;
 }
 
 BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol, int _criteria) : fe_pressure(FE_Q<dim>(1), 1,

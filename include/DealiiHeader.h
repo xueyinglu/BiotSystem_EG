@@ -33,6 +33,7 @@
 #include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/grid/grid_tools.h>
 #include <deal.II/grid/grid_in.h>
+#include <deal.II/grid/grid_refinement.h>
 
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_renumbering.h>
@@ -55,6 +56,8 @@
 #include <deal.II/numerics/solution_transfer.h>
 
 #include <deal.II/lac/generic_linear_algebra.h>
-
+#include <deal.II/distributed/tria.h>
+#include <deal.II/distributed/grid_refinement.h>
+#include <deal.II/distributed/solution_transfer.h>
 static const unsigned int dim = 2;
 #endif

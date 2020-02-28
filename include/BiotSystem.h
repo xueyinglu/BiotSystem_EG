@@ -39,7 +39,7 @@ private:
     int timestep = 0;
     int num_global_refinement = 5;
     double h = 1./pow(2,num_global_refinement);
-
+    bool adaptivity = false;
     Triangulation<dim> triangulation;
     /* EG pressure solution */
     FESystem<dim> fe_pressure;
@@ -146,7 +146,7 @@ private:
     // void setup_system();
     void setup_system_eg();
     void set_material_properties();
-
+    void refine_mesh();
     // void assemble_system_pressure();
     void assemble_system_pressure_eg();
     void assemble_system_displacement();
