@@ -17,11 +17,15 @@ void BiotSystem::refine_mesh()
     dum /= cell_eta_u.linfty_norm();
     cout << "cell_eta_u.L_infty =" << cell_eta_u.linfty_norm() << endl;
     cell_eta_refine += dum;
-    /*
-    for (const auto &n : cell_eta_refine){
-        cout << n << endl;
+
+    for (const auto &n : cell_eta_refine)
+    {
+        if (n < 0)
+        {
+            cout << n << endl;
+        }
     }
-    */
+
     parallel::distributed::GridRefinement::
         refine_and_coarsen_fixed_number(triangulation,
                                         cell_eta_refine,
