@@ -33,6 +33,7 @@ public:
 
 
 private:
+    MPI_Comm mpi_com;
     double del_t = 0.01;
     double T = 1;
     double t = 0;
@@ -40,7 +41,7 @@ private:
     int num_global_refinement = 5;
     double h = 1./pow(2,num_global_refinement);
     bool adaptivity = false;
-    Triangulation<dim> triangulation;
+    parallel::distributed::Triangulation<dim> triangulation;
     /* EG pressure solution */
     FESystem<dim> fe_pressure;
 
@@ -65,11 +66,18 @@ private:
     SparsityPattern sparsity_pattern_displacement;
     SparseMatrix<double> system_matrix_displacement;
 
-    Vector<double> solution_displacement;
+    Vector<double> solution_displacement, prev_timestep_sol_displacement, prev_fs_sol_displacement;
     Vector<double> initial_displacement;
     Vector<double> system_rhs_displacement;
+    /*
+    LA::MPI::BlockVector solution_displacement, prev_timestep_sol_displacement, prev_fs_sol_displacement;
+    LA::MPI::BlockVector initial_displacement;
+    LA::MPI::BlockVector system_rhs_displacement;
+    std::vector<IndexSet> partition_displacement;
+    std::vector<IndexSet> partition_relevant_displacement;
+    IndexSet relevant_set_displacement;
+    */
     ConvergenceTable convergence_table;
-
     vector<double> l2_error_p;
     vector<double> l2_error_u;
     vector<double> energy_error_u;
@@ -93,8 +101,6 @@ private:
     double K_b = 7./12; //K_b = lambda +2/3*mu
     double biot_inv_M = 3./28;
     double tol_fixed_stress = 1e-5;
-    Vector<double> prev_timestep_sol_displacement;
-    Vector<double> prev_fs_sol_displacement;
 
     // EG for flow
     int degree = 1;
@@ -172,7 +178,6 @@ private:
     double calc_u_energy_norm();
     void calc_efficiency_indices();
 
-    MPI_Comm mpi_com;
 };
 
 #endif

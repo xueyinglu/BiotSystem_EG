@@ -4,6 +4,7 @@
 using namespace std;
 void BiotSystem::run_fixed_stress()
 {
+    cout << "enter run fixed stress" << endl;
     set_material_properties();
     make_grid();
     setup_system_eg();

@@ -14,10 +14,14 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     // const unsigned int n_face_q_points = face_quadrature.size();
     FEFaceValues<dim> fe_face_p(fe_pressure, face_quadrature,
                                 update_values | update_normal_vectors | update_gradients | update_quadrature_points | update_JxW_values);
+    FESubfaceValues<dim> fe_subface_p(fe_pressure, face_quadrature,
+                                      update_values | update_normal_vectors | update_gradients | update_quadrature_points | update_JxW_values);
     FEFaceValues<dim> fe_face_neighbor_p(fe_pressure, face_quadrature,
                                          update_values | update_gradients | update_quadrature_points | update_JxW_values);
     FEFaceValues<dim> fe_face_u(fe_displacement, face_quadrature,
                                 update_values | update_normal_vectors | update_gradients | update_quadrature_points | update_JxW_values);
+    FESubfaceValues<dim> fe_subface_u(fe_displacement, face_quadrature,
+                                      update_values | update_normal_vectors | update_gradients | update_quadrature_points | update_JxW_values);
     FEFaceValues<dim> fe_face_neighbor_u(fe_displacement, face_quadrature,
                                          update_values | update_gradients | update_quadrature_points | update_JxW_values);
     const unsigned int dofs_per_cell = fe_displacement.dofs_per_cell;
@@ -41,75 +45,228 @@ void BiotSystem::calc_a_posteriori_indicators_u()
             //if (! cell -> at_boundary(face_no))
             {
                 Assert(cell->neighbor(face_no).state() == IteratorState::valid, ExcInternalError());
-                const typename DoFHandler<dim>::cell_iterator neighbor_p = cell->neighbor(face_no);
-                const typename DoFHandler<dim>::cell_iterator neighbor_u = cell_u->neighbor(face_no);
-                vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                vector<vector<Tensor<1, dim>>> neighbor_grad_u_values(fe_face_neighbor_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                vector<vector<Tensor<1, dim>>> prev_timestep_neighbor_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                vector<Vector<double>> face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
-                vector<Vector<double>> neighbor_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
-                vector<Vector<double>> prev_timestep_face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
-                vector<Vector<double>> prev_timestep_neighbor_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
-                vector<double> lambda_values(fe_face_p.n_quadrature_points);
-                vector<double> mu_values(fe_face_p.n_quadrature_points);
-
-                const unsigned int neighbor_face_p = cell->neighbor_of_neighbor(face_no);
-                const unsigned int neighbor_face_u = cell_u->neighbor_of_neighbor(face_no);
-                fe_face_p.reinit(cell, face_no);
-                fe_face_neighbor_p.reinit(neighbor_p, neighbor_face_p);
-                fe_face_u.reinit(cell_u, face_no);
-                fe_face_neighbor_u.reinit(neighbor_u, neighbor_face_u);
-                fe_face_p.get_function_values(solution_pressure, face_p_values);
-                fe_face_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_face_p_values);
-                fe_face_neighbor_p.get_function_values(solution_pressure, neighbor_p_values);
-                fe_face_neighbor_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_neighbor_p_values);
-
-                fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
-                fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
-                fe_face_neighbor_u.get_function_gradients(solution_displacement, neighbor_grad_u_values);
-                fe_face_neighbor_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_neighbor_grad_u_values);
-
-                lambda.value_list(fe_face_p.get_quadrature_points(), lambda_values);
-                mu.value_list(fe_face_p.get_quadrature_points(), mu_values);
-                if (test_case == TestCase::heterogeneous)
+                if (cell->face(face_no)->has_children())
                 {
-                    lambda_function.value_list(fe_face_p.get_quadrature_points(), lambda_values);
-                    mu_function.value_list(fe_face_p.get_quadrature_points(), mu_values);
+                    const unsigned int neighbor2_p = cell->neighbor_face_no(face_no);
+                    const unsigned int neighbor2_u = cell_u->neighbor_face_no(face_no);
+
+                    for (unsigned int subface_no = 0;
+                         subface_no < cell->face(face_no)->number_of_children();
+                         ++subface_no)
+                    {
+                        typename DoFHandler<dim>::cell_iterator neighbor_child_p = cell->neighbor_child_on_subface(face_no, subface_no);
+                        typename DoFHandler<dim>::cell_iterator neighbor_child_u = cell_u->neighbor_child_on_subface(face_no, subface_no);
+
+                        Assert(!neighbor_child_p->has_children(), ExcInternalError());
+                        Assert(!neighbor_child_u->has_children(), ExcInternalError());
+
+                        fe_subface_p.reinit(cell, face_no, subface_no);
+                        fe_face_neighbor_p.reinit(neighbor_child_p, neighbor2_p);
+                        fe_subface_u.reinit(cell_u, face_no, subface_no);
+                        fe_face_neighbor_u.reinit(neighbor_child_u, neighbor2_p);
+
+                        vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_subface_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                        vector<vector<Tensor<1, dim>>> neighbor_grad_u_values(fe_face_neighbor_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                        vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_subface_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                        vector<vector<Tensor<1, dim>>> prev_timestep_neighbor_grad_u_values(fe_face_neighbor_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                        vector<Vector<double>> face_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
+                        vector<Vector<double>> neighbor_p_values(fe_face_neighbor_p.n_quadrature_points, Vector<double>(2));
+                        vector<Vector<double>> prev_timestep_face_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
+                        vector<Vector<double>> prev_timestep_neighbor_p_values(fe_face_neighbor_p.n_quadrature_points, Vector<double>(2));
+                        vector<double> lambda_values(fe_subface_u.n_quadrature_points);
+                        vector<double> mu_values(fe_subface_u.n_quadrature_points);
+
+                        fe_subface_p.get_function_values(solution_pressure, face_p_values);
+                        fe_subface_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_face_p_values);
+                        fe_face_neighbor_p.get_function_values(solution_pressure, neighbor_p_values);
+                        fe_face_neighbor_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_neighbor_p_values);
+
+                        fe_subface_u.get_function_gradients(solution_displacement, face_grad_u_values);
+                        fe_subface_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
+                        fe_face_neighbor_u.get_function_gradients(solution_displacement, neighbor_grad_u_values);
+                        fe_face_neighbor_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_neighbor_grad_u_values);
+
+                        lambda.value_list(fe_subface_u.get_quadrature_points(), lambda_values);
+                        mu.value_list(fe_subface_u.get_quadrature_points(), mu_values);
+                        if (test_case == TestCase::heterogeneous)
+                        {
+                            lambda_function.value_list(fe_subface_u.get_quadrature_points(), lambda_values);
+                            mu_function.value_list(fe_subface_u.get_quadrature_points(), mu_values);
+                        }
+                        for (unsigned int q = 0; q < fe_subface_u.n_quadrature_points; q++)
+                        {
+                            Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
+                            Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                            Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+
+                            Tensor<2, dim> neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_neighbor_grad_u_values);
+                            Tensor<2, dim> neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                            Tensor<2, dim> neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+
+                            const Tensor<1, dim> &n = fe_subface_u.normal_vector(q);
+
+                            Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
+                            eta_e_partial_sigma += dum.norm_square() * fe_subface_u.JxW(q);
+                            cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_subface_u.JxW(q);
+                            face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
+                            face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                            face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+
+                            neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values);
+                            neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                            neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+                            Tensor<1, dim> dum6 = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
+                            eta_e_sigma += dum6.norm_square() * fe_subface_u.JxW(q);
+                            cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_subface_u.JxW(q);
+                        }
+                    }
                 }
-                //vector<Point<dim>> v_normal1 = fe_face_p.get_normal_vectors();
-                // vector<Point<dim>> v_normal2 = fe_face_neighbor_p.get_normal_vectors();
-                for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
+                else if (!cell->neighbor_is_coarser(face_no))
                 {
-                    Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
-                    Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
-                    Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                    const typename DoFHandler<dim>::cell_iterator neighbor_p = cell->neighbor(face_no);
+                    const typename DoFHandler<dim>::cell_iterator neighbor_u = cell_u->neighbor(face_no);
+                    vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> neighbor_grad_u_values(fe_face_neighbor_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> prev_timestep_neighbor_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<Vector<double>> face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> neighbor_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> prev_timestep_face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> prev_timestep_neighbor_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<double> lambda_values(fe_face_p.n_quadrature_points);
+                    vector<double> mu_values(fe_face_p.n_quadrature_points);
 
-                    Tensor<2, dim> neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_neighbor_grad_u_values);
-                    Tensor<2, dim> neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
-                    Tensor<2, dim> neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+                    const unsigned int neighbor_face_p = cell->neighbor_of_neighbor(face_no);
+                    const unsigned int neighbor_face_u = cell_u->neighbor_of_neighbor(face_no);
+                    fe_face_p.reinit(cell, face_no);
+                    fe_face_neighbor_p.reinit(neighbor_p, neighbor_face_p);
+                    fe_face_u.reinit(cell_u, face_no);
+                    fe_face_neighbor_u.reinit(neighbor_u, neighbor_face_u);
+                    fe_face_p.get_function_values(solution_pressure, face_p_values);
+                    fe_face_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_face_p_values);
+                    fe_face_neighbor_p.get_function_values(solution_pressure, neighbor_p_values);
+                    fe_face_neighbor_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_neighbor_p_values);
 
-                    const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
+                    fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
+                    fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
+                    fe_face_neighbor_u.get_function_gradients(solution_displacement, neighbor_grad_u_values);
+                    fe_face_neighbor_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_neighbor_grad_u_values);
 
-                    Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
-                    eta_e_partial_sigma += dum.norm_square() * fe_face_p.JxW(q);
-                    cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_p.JxW(q);
-                    face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
-                    face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
-                    face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                    lambda.value_list(fe_face_p.get_quadrature_points(), lambda_values);
+                    mu.value_list(fe_face_p.get_quadrature_points(), mu_values);
+                    if (test_case == TestCase::heterogeneous)
+                    {
+                        lambda_function.value_list(fe_face_p.get_quadrature_points(), lambda_values);
+                        mu_function.value_list(fe_face_p.get_quadrature_points(), mu_values);
+                    }
+                    for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
+                    {
+                        Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
+                        Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
 
-                    neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values);
-                    neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
-                    neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
-                    Tensor<1, dim> dum6 = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
-                    eta_e_sigma += dum6.norm_square() * fe_face_p.JxW(q);
-                    cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_p.JxW(q);
+                        Tensor<2, dim> neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_neighbor_grad_u_values);
+                        Tensor<2, dim> neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                        Tensor<2, dim> neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+
+                        const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
+
+                        Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
+                        eta_e_partial_sigma += dum.norm_square() * fe_face_p.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_p.JxW(q);
+                        face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
+                        face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+
+                        neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values);
+                        neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                        neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+                        Tensor<1, dim> dum6 = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
+                        eta_e_sigma += dum6.norm_square() * fe_face_p.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_p.JxW(q);
+                    }
+                }
+
+                else
+                {
+                    const typename DoFHandler<dim>::cell_iterator neighbor_p = cell->neighbor(face_no);
+                    const typename DoFHandler<dim>::cell_iterator neighbor_u = cell_u->neighbor(face_no);
+                    std::pair<unsigned int, unsigned int> neighbor_face_subface = cell->neighbor_of_coarser_neighbor(face_no);
+                    Assert(neighbor_face_subface.first < GeometryInfo<dim>::faces_per_cell, ExcInternalError());
+                    Assert(neighbor_face_subface.second < neighbor_p->face(neighbor_face_subface.first)->number_of_children(), ExcInternalError());
+                    Assert(neighbor_p->neighbor_child_on_subface(neighbor_face_subface.first, neighbor_face_subface.second) == cell, ExcInternalError());
+
+                    std::pair<unsigned int, unsigned int> neighbor_face_subface_u = cell_u->neighbor_of_coarser_neighbor(face_no);
+                    Assert(neighbor_face_subface_u.first < GeometryInfo<dim>::faces_per_cell, ExcInternalError());
+                    Assert(neighbor_face_subface_u.second < neighbor_u->face(neighbor_face_subface_u.first)->number_of_children(), ExcInternalError());
+                    Assert(neighbor_u->neighbor_child_on_subface(neighbor_face_subface_u.first, neighbor_face_subface_u.second) == cell_u, ExcInternalError());
+                    
+                    fe_face_p.reinit(cell, face_no);
+                    fe_subface_p.reinit(neighbor_p, neighbor_face_subface.first,
+                                        neighbor_face_subface.second);
+                    fe_face_u.reinit(cell_u, face_no);
+                    fe_subface_u.reinit(neighbor_u, neighbor_face_subface_u.first,
+                                        neighbor_face_subface_u.second);
+                    vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> neighbor_grad_u_values(fe_subface_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> prev_timestep_neighbor_grad_u_values(fe_subface_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<Vector<double>> face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> neighbor_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> prev_timestep_face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
+                    vector<Vector<double>> prev_timestep_neighbor_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
+                    vector<double> lambda_values(fe_face_u.n_quadrature_points);
+                    vector<double> mu_values(fe_face_u.n_quadrature_points);
+                    fe_face_p.get_function_values(solution_pressure, face_p_values);
+                    fe_face_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_face_p_values);
+                    fe_subface_p.get_function_values(solution_pressure, neighbor_p_values);
+                    fe_subface_p.get_function_values(prev_timestep_sol_pressure, prev_timestep_neighbor_p_values);
+
+                    fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
+                    fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
+                    fe_subface_u.get_function_gradients(solution_displacement, neighbor_grad_u_values);
+                    fe_subface_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_neighbor_grad_u_values);
+
+                    lambda.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                    mu.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                    if (test_case == TestCase::heterogeneous)
+                    {
+                        lambda_function.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                        mu_function.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                    }
+                    for (unsigned int q = 0; q < fe_face_u.n_quadrature_points; q++)
+                    {
+                        Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
+                        Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+
+                        Tensor<2, dim> neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_neighbor_grad_u_values);
+                        Tensor<2, dim> neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                        Tensor<2, dim> neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+
+                        const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
+
+                        Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
+                        eta_e_partial_sigma += dum.norm_square() * fe_face_p.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
+                        face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
+                        face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+
+                        neighbor_grad_u = Tensors::get_grad_u<dim>(q, neighbor_grad_u_values);
+                        neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
+                        neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
+                        Tensor<1, dim> dum6 = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
+                        eta_e_sigma += dum6.norm_square() * fe_face_u.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_u.JxW(q);
+                    }
                 }
             }
 
             // at the traction boundary
 
-            if (cell->face(face_no)-> at_boundary() && cell ->face(face_no)->boundary_id() == 2){
+            if (cell->face(face_no)->at_boundary() && cell->face(face_no)->boundary_id() == 2)
+            {
                 vector<double> lambda_values(fe_face_p.n_quadrature_points);
                 vector<double> mu_values(fe_face_p.n_quadrature_points);
                 vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
@@ -130,12 +287,12 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                     Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
                     Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
                     const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
-                    eta_e_N_partial_sigma += (face_sigma*n).norm_square() * fe_face_u.JxW(q);
-                    cell_eta_u[output_dofs[0]] += (face_sigma*n).norm_square() * fe_face_u.JxW(q);
+                    eta_e_N_partial_sigma += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
+                    cell_eta_u[output_dofs[0]] += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
                     face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
                     face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
                     face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
-                    Tensor<1,dim> dum = face_sigma *n - traction_bc;
+                    Tensor<1, dim> dum = face_sigma * n - traction_bc;
                     eta_e_N_sigma += dum.norm_square() * fe_face_u.JxW(q);
                     cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
                 }
@@ -153,12 +310,13 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     for (auto &n : eta_face_partial_sigma_n)
     {
         dum2 += n;
-   }
+    }
     double dum5 = 0;
-    for (auto &n : eta_N_partial_sigma_n){
+    for (auto &n : eta_N_partial_sigma_n)
+    {
         dum5 += n;
     }
-    eta_face_partial_sigma.push_back(dum2 * dum2 + dum5*dum5);
+    eta_face_partial_sigma.push_back(dum2 * dum2 + dum5 * dum5);
 
     eta_e_sigma *= h;
     eta_e_N_sigma *= h;
