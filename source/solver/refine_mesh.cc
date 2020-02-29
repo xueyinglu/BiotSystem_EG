@@ -11,14 +11,19 @@ void BiotSystem::refine_mesh()
                                                       */
     //GridRefinement::refine_and_coarsen_fixed_number(triangulation, cell_eta_p,0.1, 0.4);
     Vector<double> cell_eta_refine = cell_eta_p;
+    cout << "cell_eta_p.L_infty =" << cell_eta_p.linfty_norm() << endl;
     cell_eta_refine /= cell_eta_p.linfty_norm();
     Vector<double> dum = cell_eta_u;
     dum /= cell_eta_u.linfty_norm();
+    cout << "cell_eta_u.L_infty =" << cell_eta_u.linfty_norm() << endl;
     cell_eta_refine += dum;
+    for (const auto &n : cell_eta_refine){
+        cout << n << endl;
+    }
     parallel::distributed::GridRefinement::
         refine_and_coarsen_fixed_number(triangulation,
                                         cell_eta_refine,
-                                        0.1, 0.2);
+                                        0.1, 0.4);
     const unsigned int max_grid_level = 9;
     const unsigned int min_grid_level = 3;
     if (triangulation.n_levels() > max_grid_level)
