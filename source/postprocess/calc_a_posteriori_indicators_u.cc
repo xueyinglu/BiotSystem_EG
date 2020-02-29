@@ -159,7 +159,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                         lambda_function.value_list(fe_face_p.get_quadrature_points(), lambda_values);
                         mu_function.value_list(fe_face_p.get_quadrature_points(), mu_values);
                     }
-                    for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
+                    for (unsigned int q = 0; q < fe_face_u.n_quadrature_points; q++)
                     {
                         Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
                         Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
@@ -169,7 +169,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                         Tensor<2, dim> neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
                         Tensor<2, dim> neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
 
-                        const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
+                        const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
 
                         Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
                         eta_e_partial_sigma += dum.norm_square() * fe_face_p.JxW(q);
@@ -182,8 +182,8 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                         neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
                         neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
                         Tensor<1, dim> dum6 = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
-                        eta_e_sigma += dum6.norm_square() * fe_face_p.JxW(q);
-                        cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_p.JxW(q);
+                        eta_e_sigma += dum6.norm_square() * fe_face_u.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_u.JxW(q);
                     }
                 }
 
@@ -247,7 +247,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                         const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
 
                         Tensor<1, dim> dum = (face_sigma + biot_alpha * (face_p_values[q][0] + face_p_values[q][1] - prev_timestep_face_p_values[q][0] - prev_timestep_face_p_values[q][1]) * identity) * n - (neighbor_sigma + biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][0] - prev_timestep_neighbor_p_values[q][1]) * identity) * n;
-                        eta_e_partial_sigma += dum.norm_square() * fe_face_p.JxW(q);
+                        eta_e_partial_sigma += dum.norm_square() * fe_face_u.JxW(q);
                         cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
                         face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
                         face_E = 0.5 * (face_grad_u + transpose(face_grad_u));

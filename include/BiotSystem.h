@@ -41,7 +41,8 @@ private:
     int num_global_refinement = 5;
     double h = 1./pow(2,num_global_refinement);
     bool adaptivity = false;
-    parallel::distributed::Triangulation<dim> triangulation;
+    // parallel::distributed::Triangulation<dim> triangulation;
+    Triangulation<dim> triangulation;
     /* EG pressure solution */
     FESystem<dim> fe_pressure;
 

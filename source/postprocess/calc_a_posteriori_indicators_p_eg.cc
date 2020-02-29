@@ -125,7 +125,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                         vector<Vector<double>> face_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
                         vector<Vector<double>> neighbor_p_values(fe_face_neighbor_p.n_quadrature_points, Vector<double>(2));
                         vector<Vector<double>> prev_timestep_face_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
-                        vector<Vector<double>> prev_timestep_neighbor_p_values(fe_subface_p.n_quadrature_points, Vector<double>(2));
+                        vector<Vector<double>> prev_timestep_neighbor_p_values(fe_face_neighbor_p.n_quadrature_points, Vector<double>(2));
                         vector<vector<Tensor<1, dim>>> face_grad_p_values(fe_subface_p.n_quadrature_points, vector<Tensor<1, dim>>(2));
                         vector<vector<Tensor<1, dim>>> neighbor_grad_p_values(fe_face_neighbor_p.n_quadrature_points, vector<Tensor<1, dim>>(2));
 
@@ -138,23 +138,23 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
 
                         for (unsigned int q = 0; q < fe_subface_p.n_quadrature_points; q++)
                         {
-                            const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
+                            const Tensor<1, dim> &n = fe_subface_p.normal_vector(q);
                             double jump_t = (face_p_values[q][1] - prev_timestep_face_p_values[q][1]) - (neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][1]);
                             double jump = face_p_values[q][1] - neighbor_p_values[q][1];
                             eta_t_J_n += jump_t * jump_t * fe_face_p.JxW(q);
                             eta_pen_n += jump * jump * fe_face_p.JxW(q);
                             eta_partial_p_J_n += jump_t * jump_t * fe_face_p.JxW(q);
                             eta_p_J_n += jump * jump * fe_face_p.JxW(q);
-                            double flux_jump = permeability.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
+                            double flux_jump = permeability.value(fe_subface_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                             if (test_case == TestCase::heterogeneous)
                             {
-                                flux_jump = perm_function.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
+                                flux_jump = perm_function.value(fe_subface_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                             }
                             eta_flux_e_n += flux_jump * flux_jump * fe_face_p.JxW(q);
                             //TODO add the face integrals to the visualization
-                            cell_eta_p[output_dofs[0]] += jump_t * jump_t * fe_face_p.JxW(q);
-                            cell_eta_p[output_dofs[0]] += jump * jump * fe_face_p.JxW(q);
-                            cell_eta_p[output_dofs[0]] += flux_jump * flux_jump * fe_face_p.JxW(q);
+                            cell_eta_p[output_dofs[0]] += jump_t * jump_t * fe_subface_p.JxW(q);
+                            cell_eta_p[output_dofs[0]] += jump * jump * fe_subface_p.JxW(q);
+                            cell_eta_p[output_dofs[0]] += flux_jump * flux_jump * fe_subface_p.JxW(q);
                         }
                     }
                 }
@@ -225,7 +225,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                     fe_face_p.get_function_gradients(solution_pressure, face_grad_p_values);
                     fe_subface_p.get_function_gradients(solution_pressure, neighbor_grad_p_values);
 
-                    for (unsigned int q = 0; q < fe_subface_p.n_quadrature_points; q++)
+                    for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
                     {
                         const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
                         double jump_t = (face_p_values[q][1] - prev_timestep_face_p_values[q][1]) - (neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][1]);

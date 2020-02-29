@@ -1,6 +1,6 @@
 #include "BiotSystem.h"
 BiotSystem::BiotSystem() : mpi_com(MPI_COMM_WORLD),
-                           triangulation(mpi_com),
+                          
                            fe_pressure(FE_Q<dim>(1), 1),
                            dof_handler_pressure(triangulation),
                            fe_displacement(FE_Q<dim>(1), dim),
@@ -14,7 +14,7 @@ BiotSystem::BiotSystem() : mpi_com(MPI_COMM_WORLD),
     test_case = TestCase::terzaghi;
 }
 BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol) : mpi_com(MPI_COMM_WORLD),
-                                                                                               triangulation(mpi_com),
+                                                                                               
                                                                                                fe_pressure(FE_Q<dim>(1), 1,
                                                                                                            FE_DGQ<dim>(0), 1),
                                                                                                dof_handler_pressure(triangulation),
@@ -30,8 +30,8 @@ BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, dou
     del_t = _del_t;
     T = _T;
     h = 1. / std::pow(2, num_global_refinement);
-    // test_case = TestCase::benchmark;
-    test_case = TestCase::heterogeneous;
+    // test_case = TestCase::terzaghi;
+     test_case = TestCase::heterogeneous;
     tol_fixed_stress = _fs_tol;
     min_cell_diameter = h;
     gamma_penal = 10;
@@ -40,7 +40,7 @@ BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, dou
 }
 
 BiotSystem::BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol, int _criteria) : mpi_com(MPI_COMM_WORLD),
-                                                                                                              triangulation(mpi_com),
+                                                                                                              
                                                                                                               fe_pressure(FE_Q<dim>(1), 1,
                                                                                                                           FE_DGQ<dim>(0), 1),
                                                                                                               dof_handler_pressure(triangulation),
