@@ -53,7 +53,7 @@ void BiotSystem::run_fixed_stress()
         prev_timestep_sol_displacement = solution_displacement;
     }
 
-    for (timestep = 1; timestep < (T / del_t); timestep++)
+    for (timestep = 1; timestep < ((T +1e-5)/ del_t); timestep++)
     {
         cout << "timestep = " << timestep << endl;
         t += del_t;
