@@ -10,6 +10,7 @@ class PressureSolution: public Function<dim>{
 
     virtual double value(const Point<dim> &p, const unsigned int component) const;
 
+    virtual void gradient_value(const Point<dim> & point, Tensor<1,dim> & gradient) const;
     private:
     double t;
 };
