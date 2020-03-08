@@ -148,6 +148,7 @@ private:
     ConvergenceTable u_indicators_table;
     ConvergenceTable efficiency_table;
 
+    string filename_base;
 
     void make_grid();
     // void setup_system();
@@ -177,6 +178,7 @@ private:
     void calc_a_posteriori_indicators_u();
 
     double calc_u_energy_norm();
+    void calc_p_h_norm();
     void calc_efficiency_indices();
 
 };
