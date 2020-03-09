@@ -5,6 +5,8 @@ void BiotSystem::set_control_parameters()
     prm.enter_subsection("Global parameters");
     num_global_refinement = prm.get_integer("Global refinement numbers");
     h = 1. / pow(2, num_global_refinement);
+    min_cell_diameter = h;
+    cout <<"h=" << h << endl;
     T = prm.get_double("Final time");
     del_t = prm.get_double("Timestep size");
     criteria = prm.get_integer("Fixed-stress criteria");
@@ -25,5 +27,6 @@ void BiotSystem::set_control_parameters()
         test_case = TestCase::heterogeneous;
     }
     gamma_penal = prm.get_double("Penalization parameter");
+    cout << "gamma_penal = " << gamma_penal << endl;
     prm.leave_subsection();
 }
