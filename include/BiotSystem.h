@@ -1,6 +1,7 @@
 #ifndef BIOT_SYSTEM_H_
 #define BIOT_SYSTEM_H_
 #include "DealiiHeader.h"
+#include "ParameterReader.h"
 #include "InitialPressure.h"
 #include "RightHandSide.h"
 #include "PermFunction.h"
@@ -16,9 +17,7 @@ class BiotSystem
 {
     /* Biot system with EG for flow and CG for mechanics*/
 public:
-    BiotSystem();
-    BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol);
-    BiotSystem(int _num_global_refinement, double _del_t, double _T, double _fs_tol, int _criteria);
+    BiotSystem(ParameterHandler &prm);
     // virtual BiotSystem();
     void run_fixed_stress();
     void check_disp_solver_convergence();
@@ -34,6 +33,7 @@ public:
 
 private:
     MPI_Comm mpi_com;
+    ParameterHandler &prm;
     double del_t = 0.01;
     double T = 1;
     double t = 0;
@@ -82,9 +82,11 @@ private:
     vector<double> l2_error_p;
     vector<double> l2_error_u;
     vector<double> energy_error_u;
+    vector<double> h_error_p_sq;
     vector<int> num_fs;
 
     // Data
+    bool b_p_mult; //flag for permeability multiplier
     double mu_f = 1; // fluid viscosity
     RightHandSide right_hand_side; // mechanics equation body force
     ConstantFunction<dim> permeability;
@@ -150,6 +152,7 @@ private:
 
     string filename_base;
 
+    void set_control_parameters();
     void make_grid();
     // void setup_system();
     void setup_system_eg();

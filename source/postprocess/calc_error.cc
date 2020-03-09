@@ -102,6 +102,9 @@ void BiotSystem::calc_error()
     convergence_table.add_value("L2_p", L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
     double energy_norm = calc_u_energy_norm();
+    if (test_case == TestCase::benchmark){
+        calc_p_h_norm();
+    }
     energy_norm = sqrt(energy_norm);
     convergence_table.add_value("energy_u", energy_norm);
     l2_error_p.push_back(L2_p_EG);
