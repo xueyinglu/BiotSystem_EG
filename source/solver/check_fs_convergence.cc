@@ -19,12 +19,12 @@ double BiotSystem::check_fs_convergence()
 
     vector<vector<Tensor<1, dim>>> prev_fs_sol_grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
     vector<vector<Tensor<1, dim>>> grad_u_values(n_q_points, vector<Tensor<1, dim>>(dim));
-    vector<Vector<double>> prev_fs_sol_pressure_values(n_q_points, Vector<double> (2));
-    vector<Vector<double>> pressure_values(n_q_points, Vector<double> (2));
-    
+    vector<Vector<double>> prev_fs_sol_pressure_values(n_q_points, Vector<double>(2));
+    vector<Vector<double>> pressure_values(n_q_points, Vector<double>(2));
+
     Vector<double> difference_in_u = solution_displacement;
     difference_in_u -= prev_fs_sol_displacement;
-    cout <<"difference in u = " << difference_in_u.l2_norm() << endl;
+    cout << "difference in u = " << difference_in_u.l2_norm() << endl;
 
     double mean_stress;
     double prev_fs_mean_stress;
@@ -39,7 +39,6 @@ double BiotSystem::check_fs_convergence()
         fe_value_pressure.get_function_values(prev_fs_sol_pressure, prev_fs_sol_pressure_values);
         fe_value_displacement.get_function_gradients(solution_displacement, grad_u_values);
         fe_value_displacement.get_function_gradients(prev_fs_sol_displacement, prev_fs_sol_grad_u_values);
-        
 
         for (unsigned int q = 0; q < n_q_points; q++)
         {
@@ -48,21 +47,23 @@ double BiotSystem::check_fs_convergence()
             const Tensor<2, dim> prev_fs_grad_u = Tensors ::get_grad_u<dim>(q, prev_fs_sol_grad_u_values);
             const double prev_fs_div_u = Tensors ::get_divergence_u<dim>(prev_fs_grad_u);
             mean_stress = K_b * div_u - biot_alpha * (pressure_values[q][0] + pressure_values[q][1]);
-            prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0]+ prev_fs_sol_pressure_values[q][1]);
+            prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0] + prev_fs_sol_pressure_values[q][1]);
             residual += (mean_stress - prev_fs_mean_stress) * (mean_stress - prev_fs_mean_stress) * fe_value_pressure.JxW(q);
             l2square_mean_stress += mean_stress * mean_stress * fe_value_pressure.JxW(q);
-        
         }
     }
     //cout << "fixed stress iteration convergence criteria = " << sqrt(residual/l2square_mean_stress) << endl;
-    cout << "fixed stress iteration convergence criteria = " << sqrt(residual) << endl;
-    
-    double change_ms=0;
-    if (criteria != 2){
-        change_ms =sqrt(residual); 
+
+    double change_ms = 0;
+    if (criteria != 2)
+    {
+        change_ms = sqrt(residual);
+        cout << "fixed stress iteration convergence criteria 1 = " << change_ms << endl;
     }
-    else if (criteria == 2){
-        change_ms = sqrt(residual/l2square_mean_stress);
+    else if (criteria == 2)
+    {
+        change_ms = sqrt(residual / l2square_mean_stress);
+        cout << "fixed stress iteration convergence criteria 2 = " << change_ms << endl;
     }
     // return ;
     return change_ms;

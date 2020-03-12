@@ -1,5 +1,6 @@
 #include "BiotSystem.h"
 #include "DisplacementSolution.h"
+#include "MandelDisplacement.h"
 #include "InitialPressure.h"
 #include "AuxTools.h"
 using namespace std;
@@ -206,4 +207,46 @@ void BiotSystem::assemble_system_displacement()
                                            solution_displacement,
                                            system_rhs_displacement);
     }
+
+    else if (test_case == TestCase::mandel){
+
+        vector<bool> component_mask;
+        component_mask.push_back(true);
+        component_mask.push_back(false);
+        std::map<types::global_dof_index, double> boundary_values;
+        // on the left, boundary_id =0, u_x =0
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 0,
+                                                 ZeroFunction<dim>(dim),
+                                                 boundary_values,
+                                                 ComponentMask(component_mask));
+
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+        // on the bottom, boundary_id =2, u_y =0
+        component_mask[0] = false;
+        component_mask[1] = true;
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 2,
+                                                 ZeroFunction<dim>(dim),
+                                                 boundary_values,
+                                                 ComponentMask(component_mask));
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+        // on the top, boundary_id =3, u_y =U_y(b)
+        VectorTools::interpolate_boundary_values(dof_handler_displacement,
+                                                 3,
+                                                 MandelDisplacement(t),
+                                                 boundary_values,
+                                                 ComponentMask(component_mask));
+        MatrixTools::apply_boundary_values(boundary_values,
+                                           system_matrix_displacement,
+                                           solution_displacement,
+                                           system_rhs_displacement);
+    }
+    cout << "end of assemble_system_displacement" <<endl;
 }

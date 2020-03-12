@@ -54,19 +54,21 @@ void BiotSystem::set_material_properties()
     }
 
     if (test_case == TestCase:: mandel){
-        double perm = 1e-2;
+        double perm = 1e-13;
+        mu_f =1e-3;
         permeability = ConstantFunction<dim>(perm);
-        double F = 2e3;
-        double E = 1e4;
+        double F = 5.94e8;
+        double E = 5.94e9;
         double nu =0.2;
         double lame_lambda = E * nu / (1 + nu) / (1 - 2 * nu);
         double lame_mu = E / 2 / (1 + nu);
         K_b = lame_lambda + 2. / 3 * lame_mu;
         lambda = ConstantFunction<dim>(lame_lambda);
         mu = ConstantFunction<dim>(lame_mu);
-        biot_inv_M = 0.1;
+        biot_inv_M = 1 / 1.65e10;
         traction_bc[0] = 0;
         traction_bc[1] = -2*F; 
-
+        initial_pressure_value = 0;
+        pressure_dirichlet_bc =0;
     }
 }

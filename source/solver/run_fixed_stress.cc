@@ -26,7 +26,7 @@ void BiotSystem::run_fixed_stress()
         solve_displacement();
         prev_timestep_sol_displacement = solution_displacement;
     }
-    else if (test_case == TestCase::terzaghi )
+    else if (test_case == TestCase::terzaghi || test_case == TestCase::mandel)
     { // p_0 = 0; u_0 = 0;
         cout << "Benchmark Terzaghi : p_0 =0; u_0 = 0" << endl;
         VectorTools::interpolate(dof_handler_pressure,
@@ -59,7 +59,7 @@ void BiotSystem::run_fixed_stress()
         t += del_t;
         fixed_stress_iteration();
         plot_error();
-        if (test_case == TestCase::benchmark || test_case == TestCase::terzaghi)
+        if (test_case == TestCase::benchmark || test_case == TestCase::terzaghi || test_case == TestCase::mandel)
         {
             calc_error();
         }

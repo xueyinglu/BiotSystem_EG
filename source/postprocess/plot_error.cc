@@ -2,6 +2,8 @@
 #include "PressureSolution.h"
 #include "TerzaghiPressure.h"
 #include "DisplacementSolution.h"
+#include "MandelPressure.h"
+#include "MandelDisplacement.h"
 using namespace std;
 void BiotSystem::plot_error() const
 { /*
@@ -27,13 +29,18 @@ void BiotSystem::plot_error() const
         error[i] = std::abs(error[i]);
     }
     */
-    if (test_case == benchmark || test_case == terzaghi)
+    if (test_case == benchmark || test_case == terzaghi || test_case == TestCase::mandel)
     {
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
         VectorTools::interpolate(dof_handler_displacement,
                                  DisplacementSolution(t),
                                  interpolated_exact_sol_u);
+        if (test_case == TestCase::mandel){
+        VectorTools::interpolate(dof_handler_displacement,
+                                 MandelDisplacement(t),
+                                 interpolated_exact_sol_u);
+        }
         error_u = interpolated_exact_sol_u;
         error_u -= solution_displacement;
         for (int i = 0; i < error_u.size(); i++)
@@ -47,7 +54,7 @@ void BiotSystem::plot_error() const
         sol_names.push_back("P_DG");
         data_out.add_data_vector(solution_pressure, sol_names);
         data_out.build_patches();
-        ofstream output("visual/error-p-" + std::to_string(timestep) + ".vtk");
+        ofstream output("visual/" + filename_base + "-eg-p-" + std::to_string(timestep) + ".vtk");
         data_out.write_vtk(output);
 
         DataOut<dim> data_out_u;
@@ -65,7 +72,7 @@ void BiotSystem::plot_error() const
         data_out_u.add_data_vector(solution_displacement, u_names);
         data_out_u.add_data_vector(interpolated_exact_sol_u, u_exact_names);
         data_out_u.build_patches();
-        ofstream output_u("visual/error-u-" + std::to_string(timestep) + ".vtk");
+        ofstream output_u("visual/" + filename_base + "-eg-u-" + std::to_string(timestep) + ".vtk");
         data_out_u.write_vtk(output_u);
     }
 
@@ -80,12 +87,12 @@ void BiotSystem::plot_error() const
         data_out.build_patches();
         if (adaptivity == true)
         {
-            ofstream output("visual/a-sol-eg-p-" + std::to_string(timestep) + ".vtk");
+            ofstream output("visual/" + filename_base + "-ada-eg-p-" + std::to_string(timestep) + ".vtk");
             data_out.write_vtk(output);
         }
         else
         {
-            ofstream output("visual/sol-eg-p-" + std::to_string(timestep) + ".vtk");
+            ofstream output("visual/" + filename_base + "-eg-p-" + std::to_string(timestep) + ".vtk");
             data_out.write_vtk(output);
         }
         DataOut<dim> data_out_u;
@@ -97,12 +104,12 @@ void BiotSystem::plot_error() const
         data_out_u.build_patches();
         if (adaptivity == true)
         {
-            ofstream output_u("visual/a-sol-u-" + std::to_string(timestep) + ".vtk");
+            ofstream output_u("visual/" + filename_base + "-ada-eg-u-" + std::to_string(timestep) + ".vtk");
             data_out_u.write_vtk(output_u);
         }
         else
         {
-            ofstream output_u("visual/sol-u-" + std::to_string(timestep) + ".vtk");
+            ofstream output_u("visual/" + filename_base + "-ada-eg-u-" + std::to_string(timestep) + ".vtk");
             data_out_u.write_vtk(output_u);
         }
     }

@@ -12,7 +12,7 @@ void BiotSystem::output_error() {
     convergence_table.set_tex_caption("L2_p", "L^2-error p");
     convergence_table.set_tex_caption("L2_u", "L^2-error $\\mathbf{u}$");
 
-    ofstream error_table_file("error-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
+    ofstream error_table_file(filename_base+ "-"+to_string(num_global_refinement) + "-" +to_string(del_t) +".tex");
     convergence_table.write_tex(error_table_file);
 
     
@@ -54,7 +54,7 @@ void BiotSystem::output_error() {
     u_indicators_table.set_tex_caption("eta_partial_u", "$\\eta_{\\mathcal{T}_{\\partial u}}$");
     u_indicators_table.set_tex_caption("eta_u", "$\\eta_{\\mathcal{T}_{u}}$");
     u_indicators_table.set_tex_table_caption("Mechanics indicators: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$"); 
-    ofstream aposterior_table_file("aposteriori-"+to_string(num_global_refinement) + "-" +to_string(del_t)+".tex");
+    ofstream aposterior_table_file(filename_base+ "-aposteriori-"+to_string(num_global_refinement) + "-" +to_string(del_t)+".tex");
     p_indicators_table.write_tex(aposterior_table_file, false);
     u_indicators_table.write_tex(aposterior_table_file, false);
 

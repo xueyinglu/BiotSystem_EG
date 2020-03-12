@@ -304,7 +304,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
     data_out.attach_dof_handler(dof_handler_output);
     data_out.add_data_vector(cell_eta_p, "eta_E_p", DataOut<dim>::type_dof_data);
     data_out.build_patches();
-    ofstream output("visual/indicators-p" + to_string(timestep) + ".vtk");
+    ofstream output("visual/" +filename_base + "-indicators-p" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);
 
     p_indicators_table.add_value("time", t);

@@ -200,7 +200,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                     Assert(neighbor_face_subface_u.first < GeometryInfo<dim>::faces_per_cell, ExcInternalError());
                     Assert(neighbor_face_subface_u.second < neighbor_u->face(neighbor_face_subface_u.first)->number_of_children(), ExcInternalError());
                     Assert(neighbor_u->neighbor_child_on_subface(neighbor_face_subface_u.first, neighbor_face_subface_u.second) == cell_u, ExcInternalError());
-                    
+
                     fe_face_p.reinit(cell, face_no);
                     fe_subface_p.reinit(neighbor_p, neighbor_face_subface.first,
                                         neighbor_face_subface.second);
@@ -264,37 +264,39 @@ void BiotSystem::calc_a_posteriori_indicators_u()
             }
 
             // at the traction boundary
-
-            if (cell->face(face_no)->at_boundary() && cell->face(face_no)->boundary_id() == 2)
+            if (test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous)
             {
-                vector<double> lambda_values(fe_face_p.n_quadrature_points);
-                vector<double> mu_values(fe_face_p.n_quadrature_points);
-                vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
-                fe_face_u.reinit(cell_u, face_no);
-                fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
-                fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
-                lambda.value_list(fe_face_u.get_quadrature_points(), lambda_values);
-                mu.value_list(fe_face_u.get_quadrature_points(), mu_values);
-                if (test_case == TestCase::heterogeneous)
+                if (cell->face(face_no)->at_boundary() && cell->face(face_no)->boundary_id() == 2)
                 {
-                    lambda_function.value_list(fe_face_u.get_quadrature_points(), lambda_values);
-                    mu_function.value_list(fe_face_u.get_quadrature_points(), mu_values);
-                }
-                for (unsigned int q = 0; q < fe_face_u.n_quadrature_points; q++)
-                {
-                    Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
-                    Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
-                    Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
-                    const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
-                    eta_e_N_partial_sigma += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
-                    cell_eta_u[output_dofs[0]] += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
-                    face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
-                    face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
-                    face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
-                    Tensor<1, dim> dum = face_sigma * n - traction_bc;
-                    eta_e_N_sigma += dum.norm_square() * fe_face_u.JxW(q);
-                    cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
+                    vector<double> lambda_values(fe_face_p.n_quadrature_points);
+                    vector<double> mu_values(fe_face_p.n_quadrature_points);
+                    vector<vector<Tensor<1, dim>>> face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    vector<vector<Tensor<1, dim>>> prev_timestep_face_grad_u_values(fe_face_u.n_quadrature_points, vector<Tensor<1, dim>>(dim));
+                    fe_face_u.reinit(cell_u, face_no);
+                    fe_face_u.get_function_gradients(solution_displacement, face_grad_u_values);
+                    fe_face_u.get_function_gradients(prev_timestep_sol_displacement, prev_timestep_face_grad_u_values);
+                    lambda.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                    mu.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                    if (test_case == TestCase::heterogeneous)
+                    {
+                        lambda_function.value_list(fe_face_u.get_quadrature_points(), lambda_values);
+                        mu_function.value_list(fe_face_u.get_quadrature_points(), mu_values);
+                    }
+                    for (unsigned int q = 0; q < fe_face_u.n_quadrature_points; q++)
+                    {
+                        Tensor<2, dim> face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values) - Tensors::get_grad_u<dim>(q, prev_timestep_face_grad_u_values);
+                        Tensor<2, dim> face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        Tensor<2, dim> face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                        const Tensor<1, dim> &n = fe_face_u.normal_vector(q);
+                        eta_e_N_partial_sigma += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
+                        cell_eta_u[output_dofs[0]] += (face_sigma * n).norm_square() * fe_face_u.JxW(q);
+                        face_grad_u = Tensors::get_grad_u<dim>(q, face_grad_u_values);
+                        face_E = 0.5 * (face_grad_u + transpose(face_grad_u));
+                        face_sigma = 2 * mu_values[q] * face_E + lambda_values[q] * trace(face_E) * identity;
+                        Tensor<1, dim> dum = face_sigma * n - traction_bc;
+                        eta_e_N_sigma += dum.norm_square() * fe_face_u.JxW(q);
+                        cell_eta_u[output_dofs[0]] += dum.norm_square() * fe_face_u.JxW(q);
+                    }
                 }
             }
         }
@@ -426,6 +428,6 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     data_out.attach_dof_handler(dof_handler_output);
     data_out.add_data_vector(cell_eta_u, "eta_E_u", DataOut<dim>::type_dof_data);
     data_out.build_patches();
-    ofstream output("visual/indicators-u" + to_string(timestep) + ".vtk");
+    ofstream output("visual/"+filename_base+"-indicators-u" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);
 }

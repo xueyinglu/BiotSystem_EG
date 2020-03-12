@@ -188,8 +188,11 @@ void BiotSystem::assemble_system_pressure_eg()
                 if (cell->at_boundary(face_no))
                 {
                     // Weakly impose Dirichlet BC where the boundary indicator is 0
-                    if (cell->face(face_no)->boundary_indicator() == 2)
+                    if (
+                        ((test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous) && cell->face(face_no)->boundary_indicator() == 2)
+                        || (test_case == TestCase::mandel && cell->face(face_no)->boundary_indicator() == 1) )
                     {
+                        // cout << "weakly impose pressure dirichlet bc" << endl;
                         fe_face_values.reinit(cell, face_no);
 
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
