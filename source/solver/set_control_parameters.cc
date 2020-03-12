@@ -22,6 +22,10 @@ void BiotSystem::set_control_parameters()
     {
         test_case = TestCase::terzaghi;
     }
+    else if (prm.get("Test case") == "mandel")
+    {
+        test_case = TestCase::mandel;
+    }
     else if (prm.get("Test case") == "heterogeneous")
     {
         test_case = TestCase::heterogeneous;
