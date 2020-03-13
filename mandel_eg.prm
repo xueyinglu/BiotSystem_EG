@@ -1,0 +1,18 @@
+# Listing of Example BiotSystem_EG Benchmark test
+# ----------------------------------------------------
+
+subsection Global parameters
+  set Global refinement numbers         = 5
+  set Final time                        = 5000
+  set Timestep size			= 10
+  set Fixed-stress criteria             = 2
+  set Fixed-stress tolerance            = 1e-6
+  set Output filename	    	        = mandel
+  set Test case                         = mandel
+  set Adaptivity flag                   = false
+  set Permeability multiplier flag      = false
+  set Penalization parameter            = 1000
+
+# Add here to read-in the grid
+end
+
