@@ -7,7 +7,7 @@ void BiotSystem::calc_efficiency_indices(){
     double error_sq = l2_error_p.back()*l2_error_p.back()*biot_inv_M/4 + energy_error_u.back()*energy_error_u.back();
 
     for (auto &n: h_error_p_sq){
-        error_sq += del_t * n;
+        error_sq += 1.0/2/mu_f *del_t * n;
     }
     double I_eff = sqrt(eta_sum.back()/error_sq);
 

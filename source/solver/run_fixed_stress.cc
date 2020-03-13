@@ -69,7 +69,7 @@ void BiotSystem::run_fixed_stress()
             calc_a_posteriori_indicators_p_eg();
             calc_a_posteriori_indicators_u();
         }
-        if (test_case == TestCase::benchmark)
+        if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
         {
             calc_efficiency_indices();
         }

@@ -28,8 +28,10 @@ void BiotSystem::calc_error()
             fe_values_pressure.reinit(cell);
 
             //exact_pressure_gradient.vector_value_list(fe_values_pressure.get_quadrature_points(), exact_pressure_grads);
+            if (test_case== TestCase::benchmark){
             exact_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
-            if (test_case == TestCase::mandel)
+            }
+            else if (test_case == TestCase::mandel)
             {
                 mandel_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
             }
@@ -123,7 +125,7 @@ void BiotSystem::calc_error()
     convergence_table.add_value("L2_p", L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
     double energy_norm; 
-    if (test_case == TestCase::benchmark)
+    if (test_case == TestCase::benchmark|| test_case == TestCase::mandel)
     {
         calc_p_h_norm();
         energy_norm= calc_u_energy_norm();
