@@ -64,6 +64,6 @@ void BiotSystem::calc_strain_stress()
     data_out.add_data_vector(cell_strain_yy, "eg_strain_yy", DataOut<dim>::type_dof_data);
     data_out.add_data_vector(cell_vstrain, "eg_vstrain", DataOut<dim>::type_dof_data);
     data_out.build_patches();
-    ofstream output("visual/eg-stress" + to_string(timestep) + ".vtk");
+    ofstream output("visual/" + filename_base + "-eg-stress" + to_string(timestep) + ".vtk");
     data_out.write_vtk(output);
 }
