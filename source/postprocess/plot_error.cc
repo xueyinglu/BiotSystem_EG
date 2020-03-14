@@ -31,7 +31,6 @@ void BiotSystem::plot_error() const
     */
     if (test_case == benchmark || test_case == terzaghi || test_case == TestCase::mandel)
     {
-       /*
         DataOut<dim> data_out_exact;
         data_out_exact.attach_dof_handler(dof_handler_output);
         Vector<double> interpolated_exact_sol_p;
@@ -60,7 +59,6 @@ void BiotSystem::plot_error() const
         
         ofstream output_exact("visual/" + filename_base + "-exact-p-" + std::to_string(timestep) + ".vtk");
         data_out_exact.write_vtk(output_exact);
-*/
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
         if (test_case == TestCase::benchmark)

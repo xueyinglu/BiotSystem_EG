@@ -56,10 +56,15 @@ void BiotSystem::run_fixed_stress()
 
     for (timestep = 1; timestep < ((T + 1e-5) / del_t); timestep++)
     {
-        cout << "timestep = " << timestep << endl;
+        cout << "---------------- timestep = " << timestep << "------------------------"<< endl;
         t += del_t;
         fixed_stress_iteration();
 
+        if (criteria != 3)
+        {
+            calc_a_posteriori_indicators_p_eg();
+            calc_a_posteriori_indicators_u();
+        }
         if (timestep % output_frequency == 0)
         {
             plot_error();
@@ -68,11 +73,6 @@ void BiotSystem::run_fixed_stress()
                 calc_error();
             }
 
-            if (criteria != 3)
-            {
-                calc_a_posteriori_indicators_p_eg();
-                calc_a_posteriori_indicators_u();
-            }
             if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
             {
                 calc_efficiency_indices();
