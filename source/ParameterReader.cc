@@ -31,6 +31,8 @@ void ParameterReader::declare_parameters()
         prm.declare_entry("Fixed-stress tolerance", "1e-7", Patterns::Double(0));
         
         prm.declare_entry("Output filename", "solution_", Patterns::Anything());
+
+        prm.declare_entry("Output frequency", "1", Patterns::Integer(0));
         
         prm.declare_entry("Test case", "benchmark", Patterns::Anything());
         
