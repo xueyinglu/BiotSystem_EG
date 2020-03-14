@@ -65,7 +65,8 @@ void BiotSystem::set_material_properties()
         K_b = lame_lambda + 2. / 3 * lame_mu;
         lambda = ConstantFunction<dim>(lame_lambda);
         mu = ConstantFunction<dim>(lame_mu);
-        biot_inv_M = 1 / 1.65e10;
+        biot_alpha =1.0;
+        biot_inv_M = 1.0 / 1.65e10;
         traction_bc[0] = 0;
         traction_bc[1] = -2*F; 
         initial_pressure_value = 0;
