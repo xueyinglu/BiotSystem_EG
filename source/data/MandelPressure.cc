@@ -22,11 +22,11 @@ double MandelPressure::value(const Point<dim> &p, const unsigned int component) 
     // fluid diffusivity coefficient
     double c_f = 1. / c_0 * k/mu_f * (K_bulk + 4. / 3 * mu) / (K_u + 4. / 3 * mu);
     // Skempton's coefficient
-    double B = alpha / c_0 / K_u;
-    // double B = 5.0 / 6;
+    // double B = alpha / c_0 / K_u;
+    double B = 5.0 / 6;
     // undrained Poisson's ratio
-    double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
-    // double nu_u = 0.44;
+    // double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
+    double nu_u = 0.44;
     double cc = (1 - nu) / (nu_u - nu);
     // solve tan(a_n) = (1-nu)/(nu_u-nu)*a_n numerically
     vector<double> vector_a;
@@ -37,17 +37,17 @@ double MandelPressure::value(const Point<dim> &p, const unsigned int component) 
     double middle = (left + right) / 2;
     double error_mod = 1;
     double x0;
-    for (int i = 1; i < n_terms; i++)
+    for (int n = 1; n < n_terms; n_subscriptions++)
     {
 
         while (error_mod > 1e-8)
         {
             double error = cc * middle - tan(middle);
-            if (error > 1e-12)
+            if (error > 0.0)
             {
                 left = middle;
             }
-            else if (error < 1e-12)
+            else if (error < 0.0)
             {
                 right = middle;
             }
@@ -56,15 +56,15 @@ double MandelPressure::value(const Point<dim> &p, const unsigned int component) 
                 left = middle;
                 right = middle;
             }
-            middle = (left + right) / 2;
+            middle = (left + right) / 2.0;
             error_mod = abs(tan(middle) - cc * middle);
             x0 = middle;
         }
         vector_a.push_back(x0);
         error_mod = 1.0;
         left = x0 + PI;
-        right = (i + 0.5) * PI;
-        middle = (left + right) / 2;
+        right = (n + 0.5) * PI;
+        middle = (left + right) / 2.0;
     }
     double x = p(0);
     double pressure = 0;
