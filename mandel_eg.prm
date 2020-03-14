@@ -2,11 +2,11 @@
 # ----------------------------------------------------
 
 subsection Global parameters
-  set Global refinement numbers         = 5
+  set Global refinement numbers         = 4
   set Final time                        = 1
   set Timestep size			= 1e-3
   set Fixed-stress criteria             = 2
-  set Fixed-stress tolerance            = 1e-6
+  set Fixed-stress tolerance            = 1e-4
   set Output filename	    	        = mandel
   set Output frequency                  = 10
   set Test case                         = mandel

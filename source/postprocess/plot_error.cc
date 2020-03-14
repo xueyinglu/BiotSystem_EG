@@ -31,15 +31,46 @@ void BiotSystem::plot_error() const
     */
     if (test_case == benchmark || test_case == terzaghi || test_case == TestCase::mandel)
     {
+        Vector<double> interpolated_exact_sol_p(dof_handler_output.n_dofs());
+        if (test_case == TestCase::benchmark)
+        {
+            VectorTools::interpolate(dof_handler_output,
+                                     PressureSolution(t),
+                                     interpolated_exact_sol_p);
+        }
+        else if (test_case == TestCase::terzaghi)
+        {
+            VectorTools::interpolate(dof_handler_output,
+                                     TerzaghiPressure(t),
+                                     interpolated_exact_sol_p);
+        }
+        else if (test_case == TestCase::mandel)
+        {
+            VectorTools::interpolate(dof_handler_output,
+                                     MandelPressure(t),
+                                     interpolated_exact_sol_p);
+        }
+        DataOut<dim> data_out_exact;
+        data_out_exact.attach_dof_handler(dof_handler_output);
+        data_out_exact.add_data_vector(interpolated_exact_sol_p, "exact_p");
+        data_out_exact.build_patches();
+        
+        ofstream output_exact("visual/" + filename_base + "-exact-p-" + std::to_string(timestep) + ".vtk");
+        data_out_exact.write_vtk(output_exact);
+
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
-        VectorTools::interpolate(dof_handler_displacement,
-                                 DisplacementSolution(t),
-                                 interpolated_exact_sol_u);
-        if (test_case == TestCase::mandel){
-        VectorTools::interpolate(dof_handler_displacement,
-                                 MandelDisplacement(t),
-                                 interpolated_exact_sol_u);
+        if (test_case == TestCase::benchmark)
+        {
+            VectorTools::interpolate(dof_handler_displacement,
+                                     DisplacementSolution(t),
+                                     interpolated_exact_sol_u);
+        }
+        else if (test_case == TestCase::mandel)
+        {
+            VectorTools::interpolate(dof_handler_displacement,
+                                     MandelDisplacement(t),
+                                     interpolated_exact_sol_u);
         }
         error_u = interpolated_exact_sol_u;
         error_u -= solution_displacement;

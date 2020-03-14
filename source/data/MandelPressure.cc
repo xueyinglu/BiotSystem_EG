@@ -22,11 +22,11 @@ double MandelPressure::value(const Point<dim> &p, const unsigned int component) 
     // fluid diffusivity coefficient
     double c_f = 1. / c_0 * k/mu_f * (K_bulk + 4. / 3 * mu) / (K_u + 4. / 3 * mu);
     // Skempton's coefficient
-    // double B = alpha / inv_M / K_u;
-    double B = 5.0 / 6;
+    double B = alpha / c_0 / K_u;
+    // double B = 5.0 / 6;
     // undrained Poisson's ratio
-    // double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
-    double nu_u = 0.44;
+    double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
+    // double nu_u = 0.44;
     double cc = (1 - nu) / (nu_u - nu);
     // solve tan(a_n) = (1-nu)/(nu_u-nu)*a_n numerically
     vector<double> vector_a;
