@@ -38,11 +38,12 @@ void BiotSystem::run_fixed_stress()
                                  solution_displacement);
         prev_timestep_sol_displacement = solution_displacement;
     }
-    else if (test_case == TestCase::heterogeneous){
-       cout << "heterogeneous test" << endl;
-       vector<double> eg_initial_p;
-       eg_initial_p.push_back(initial_pressure_value);
-       eg_initial_p.push_back(0.);
+    else if (test_case == TestCase::heterogeneous)
+    {
+        cout << "heterogeneous test" << endl;
+        vector<double> eg_initial_p;
+        eg_initial_p.push_back(initial_pressure_value);
+        eg_initial_p.push_back(0.);
         VectorTools::interpolate(dof_handler_pressure,
                                  ConstantFunction<dim>(eg_initial_p),
                                  solution_pressure);
@@ -53,27 +54,31 @@ void BiotSystem::run_fixed_stress()
         prev_timestep_sol_displacement = solution_displacement;
     }
 
-    for (timestep = 1; timestep < ((T +1e-5)/ del_t); timestep++)
+    for (timestep = 1; timestep < ((T + 1e-5) / del_t); timestep++)
     {
         cout << "timestep = " << timestep << endl;
         t += del_t;
         fixed_stress_iteration();
-        plot_error();
-        if (test_case == TestCase::benchmark || test_case == TestCase::terzaghi || test_case == TestCase::mandel)
-        {
-            calc_error();
-        }
 
-        if (criteria != 3)
+        if (timestep % output_frequency == 0)
         {
-            calc_a_posteriori_indicators_p_eg();
-            calc_a_posteriori_indicators_u();
+            plot_error();
+            if (test_case == TestCase::benchmark || test_case == TestCase::terzaghi || test_case == TestCase::mandel)
+            {
+                calc_error();
+            }
+
+            if (criteria != 3)
+            {
+                calc_a_posteriori_indicators_p_eg();
+                calc_a_posteriori_indicators_u();
+            }
+            if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
+            {
+                calc_efficiency_indices();
+            }
+            calc_strain_stress();
         }
-        if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
-        {
-            calc_efficiency_indices();
-        }
-        calc_strain_stress();
         if (adaptivity == true)
         {
             refine_mesh();

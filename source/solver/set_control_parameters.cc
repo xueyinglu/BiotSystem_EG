@@ -12,6 +12,7 @@ void BiotSystem::set_control_parameters()
     criteria = prm.get_integer("Fixed-stress criteria");
     tol_fixed_stress = prm.get_double("Fixed-stress tolerance");
     filename_base = prm.get("Output filename");
+    output_frequency = prm.get_integer("Output frequency");
     adaptivity = prm.get_bool("Adaptivity flag");
     b_p_mult = prm.get_bool("Permeability multiplier flag");
     if (prm.get("Test case") == "benchmark")

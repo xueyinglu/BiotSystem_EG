@@ -151,6 +151,7 @@ private:
     ConvergenceTable efficiency_table;
 
     string filename_base;
+    int output_frequency;
 
     void set_control_parameters();
     void make_grid();
