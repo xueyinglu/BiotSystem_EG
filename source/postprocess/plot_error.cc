@@ -31,7 +31,11 @@ void BiotSystem::plot_error() const
     */
     if (test_case == benchmark || test_case == terzaghi || test_case == TestCase::mandel)
     {
-        Vector<double> interpolated_exact_sol_p(dof_handler_output.n_dofs());
+       /*
+        DataOut<dim> data_out_exact;
+        data_out_exact.attach_dof_handler(dof_handler_output);
+        Vector<double> interpolated_exact_sol_p;
+        interpolated_exact_sol_p.reinit(dof_handler_output.n_dofs());
         if (test_case == TestCase::benchmark)
         {
             VectorTools::interpolate(dof_handler_output,
@@ -49,15 +53,14 @@ void BiotSystem::plot_error() const
             VectorTools::interpolate(dof_handler_output,
                                      MandelPressure(t),
                                      interpolated_exact_sol_p);
+            cout << "interpolated Mandel pressure !" <<endl;
         }
-        DataOut<dim> data_out_exact;
-        data_out_exact.attach_dof_handler(dof_handler_output);
         data_out_exact.add_data_vector(interpolated_exact_sol_p, "exact_p",DataOut<dim>::type_dof_data);
         data_out_exact.build_patches();
         
         ofstream output_exact("visual/" + filename_base + "-exact-p-" + std::to_string(timestep) + ".vtk");
         data_out_exact.write_vtk(output_exact);
-
+*/
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
         if (test_case == TestCase::benchmark)

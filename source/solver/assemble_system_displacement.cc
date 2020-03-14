@@ -248,5 +248,4 @@ void BiotSystem::assemble_system_displacement()
                                            solution_displacement,
                                            system_rhs_displacement);
     }
-    cout << "end of assemble_system_displacement" <<endl;
 }
