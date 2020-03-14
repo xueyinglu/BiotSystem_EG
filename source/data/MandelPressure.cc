@@ -37,7 +37,7 @@ double MandelPressure::value(const Point<dim> &p, const unsigned int component) 
     double middle = (left + right) / 2;
     double error_mod = 1;
     double x0;
-    for (int n = 1; n < n_terms; n_subscriptions++)
+    for (int n = 1; n < n_terms; n++)
     {
 
         while (error_mod > 1e-8)
