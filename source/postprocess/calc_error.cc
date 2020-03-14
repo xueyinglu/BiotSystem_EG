@@ -122,7 +122,7 @@ void BiotSystem::calc_error()
 
     convergence_table.add_value("time", t);
     convergence_table.add_value("1/h", 1. / h);
-    convergence_table.add_value("L2_p", L2_p_EG);
+    convergence_table.add_value("L2_p", sqrt(biot_inv_M)*L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
     double energy_norm; 
     if (test_case == TestCase::benchmark|| test_case == TestCase::mandel)
