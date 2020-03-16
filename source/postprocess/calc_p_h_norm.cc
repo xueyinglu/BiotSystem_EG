@@ -1,5 +1,6 @@
 #include "BiotSystem.h"
 #include "PressureSolution.h"
+#include "MandelPressure.h"
 void BiotSystem::calc_p_h_norm()
 {
 
@@ -24,7 +25,14 @@ void BiotSystem::calc_p_h_norm()
         for (unsigned int q = 0; q < n_q_points; q++)
         {
             Tensor<1, dim> true_grad_p;
-            PressureSolution(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+            if (test_case == TestCase::benchmark)
+            {
+                PressureSolution(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+            }
+            else if (test_case == TestCase::mandel)
+            {
+                MandelPressure(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+            }
             h_norm_p_sq += permeability_values[q] * (grad_p_values[q][0] + grad_p_values[q][1] - true_grad_p).norm_square() * fe_value_pressure.JxW(q);
         }
     }
@@ -68,7 +76,7 @@ void BiotSystem::calc_p_h_norm()
                         for (unsigned int q = 0; q < fe_subface_p.n_quadrature_points; q++)
                         {
                             double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                            h_norm_p_sq+= jump *jump *fe_subface_p.JxW(q);
+                            h_norm_p_sq += jump * jump * fe_subface_p.JxW(q);
                         }
                     }
                 }
@@ -86,7 +94,7 @@ void BiotSystem::calc_p_h_norm()
                     for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
                     {
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        h_norm_p_sq+= jump *jump *fe_face_p.JxW(q);
+                        h_norm_p_sq += jump * jump * fe_face_p.JxW(q);
                     }
                 }
                 else
@@ -109,7 +117,7 @@ void BiotSystem::calc_p_h_norm()
                     for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
                     {
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        h_norm_p_sq+= jump *jump *fe_face_p.JxW(q);
+                        h_norm_p_sq += jump * jump * fe_face_p.JxW(q);
                     }
                 }
             }

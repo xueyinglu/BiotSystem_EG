@@ -127,7 +127,6 @@ void BiotSystem::calc_error()
     double energy_norm; 
     if (test_case == TestCase::benchmark|| test_case == TestCase::mandel)
     {
-        calc_p_h_norm();
         energy_norm= calc_u_energy_norm();
         energy_norm = sqrt(energy_norm);
     }

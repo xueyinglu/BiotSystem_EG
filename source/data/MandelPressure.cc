@@ -144,13 +144,13 @@ void MandelPressure::gradient_value(const Point<dim> & point, Tensor<1,dim> & gr
         right = (n + 0.5) * PI;
         middle = (left + right) / 2.0;
     }
-    double x = p(0);
+    double x = point(0);
      gradient[0] =0;
      gradient[1] = 0;
     for (int i = 1; i < n_terms; i++)
     {
         double a_n =vector_a[i];
-        pressure += 2 * F * B * (1 + nu_u) / 3 / a * (-a_n/a)* sin(a_n) / (a_n - sin(a_n) * cos(a_n)) * sin(a_n * x / a) * exp(-a_n * a_n * c_f * t / a / a);
+        gradient[0] += 2 * F * B * (1 + nu_u) / 3 / a * (-a_n/a)* sin(a_n) / (a_n - sin(a_n) * cos(a_n)) * sin(a_n * x / a) * exp(-a_n * a_n * c_f * t / a / a);
     }
     if (t==0){
         gradient[0] = 0;

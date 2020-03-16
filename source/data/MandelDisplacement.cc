@@ -153,7 +153,7 @@ void MandelDisplacement::gradient_value(const Point<dim> &point, Tensor<2, dim> 
         right = (n + 0.5) * PI;
         middle = (left + right) / 2.0;
     }
-
+    double x = point(0);
     gradient[0][0] = F * nu / 2 / mu / a ;
     gradient[0][1] = 0;
     gradient[1][0] = 0;
@@ -161,7 +161,8 @@ void MandelDisplacement::gradient_value(const Point<dim> &point, Tensor<2, dim> 
     for (int i = 1; i < n_terms; i++)
     {
         double a_n = vector_a[i];
-        gradient[0][0] += -F * nu_u / mu / a * sin(a_n) * cos(a_n) / (a_n - sin(a_n) * cos(a_n)) * exp(-a_n * a_n * c_f * t / a / a) ;
+        gradient[0][0] += -F * nu_u / mu / a * sin(a_n) * cos(a_n) / (a_n - sin(a_n) * cos(a_n)) * exp(-a_n * a_n * c_f * t / a / a)
+                        + F / mu * cos(a_n) / (a_n - sin(a_n) * cos(a_n)) * a_n/a * cos(a_n * x / a) * exp(-a_n * a_n * c_f * t / a / a) ;
         gradient[1][1] += F * (1 - nu_u) / mu / a * sin(a_n) * cos(a_n) / (a_n - sin(a_n) * cos(a_n)) * exp(-a_n * a_n * c_f * t / a / a) ;
     }
     if (t == 0)
