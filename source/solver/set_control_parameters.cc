@@ -4,9 +4,9 @@ void BiotSystem::set_control_parameters()
 {
     prm.enter_subsection("Global parameters");
     num_global_refinement = prm.get_integer("Global refinement numbers");
-    h = 1. / pow(2, num_global_refinement);
+    h = sqrt(2.0) / pow(2, num_global_refinement);
     min_cell_diameter = h;
-    cout <<"h=" << h << endl;
+    cout << "h=" << h << endl;
     T = prm.get_double("Final time");
     del_t = prm.get_double("Timestep size");
     criteria = prm.get_integer("Fixed-stress criteria");
@@ -26,6 +26,8 @@ void BiotSystem::set_control_parameters()
     else if (prm.get("Test case") == "mandel")
     {
         test_case = TestCase::mandel;
+        h = sqrt(100.0 * 100.0 + 10.0 * 10.0) / pow(2, num_global_refinement);
+        min_cell_diameter = h;
     }
     else if (prm.get("Test case") == "heterogeneous")
     {
