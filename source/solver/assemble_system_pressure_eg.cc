@@ -108,10 +108,10 @@ void BiotSystem::assemble_system_pressure_eg()
             prev_timestep_mean_stress = K_b * prev_time_div_u - biot_alpha * (prev_timestep_sol_pressure_values[q][0] + prev_timestep_sol_pressure_values[q][1]);
             prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0] + prev_fs_sol_pressure_values[q][1]);
             // xueying: assign perm values
-            d_Big_K = permeability.value(fe_value.quadrature_point(q), 0)/mu_f;
+            d_Big_K = permeability.value(fe_value.quadrature_point(q), 0) / mu_f;
             if (test_case == TestCase::heterogeneous)
             {
-                d_Big_K = perm_function.value(fe_value.quadrature_point(q), 0)/mu_f;
+                d_Big_K = perm_function.value(fe_value.quadrature_point(q), 0) / mu_f;
             }
             for (unsigned int i = 0; i < dofs_per_cell; i++)
             {
@@ -147,7 +147,7 @@ void BiotSystem::assemble_system_pressure_eg()
                 //    (fe_value.shape_value(i, q) * // phi_i(x_q)
                 //     1 *                          // f(x_q)
                 //     fe_value.JxW(q));            // dx
-                
+
                 if (test_case == TestCase::heterogeneous)
                 {
                     // add a well term
@@ -160,11 +160,11 @@ void BiotSystem::assemble_system_pressure_eg()
                     {
                         cell_rhs(i) +=
                             (fe_value.shape_value(i, q) * // phi_i(x_q)
-                             -20 *                     // f(x_q)
+                             -20 *                        // f(x_q)
                              fe_value.JxW(q));            // dx
                     }
                 }
-                
+
                 // prev time step
                 cell_rhs(i) +=
                     ((biot_inv_M + biot_alpha * biot_alpha / K_b) / del_t * // (1/M + alpha^2/K_b)/del_t
@@ -189,12 +189,13 @@ void BiotSystem::assemble_system_pressure_eg()
                 {
                     // Weakly impose Dirichlet BC where the boundary indicator is 0
                     if (
-                        ((test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous) && cell->face(face_no)->boundary_id() == 2)
-                        || (test_case == TestCase::mandel && cell->face(face_no)->boundary_id() == 1) )
+                        ((test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous) && cell->face(face_no)->boundary_id() == 2) || (test_case == TestCase::mandel && cell->face(face_no)->boundary_id() == 1))
                     {
                         // cout << "weakly impose pressure dirichlet bc" << endl;
                         fe_face_values.reinit(cell, face_no);
 
+                        double h_e = cell->face(face_no)->diameter();
+                        penalty_term = gamma_penal / h_e;
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
@@ -289,6 +290,8 @@ void BiotSystem::assemble_system_pressure_eg()
                             //Get Neighbor Child
                             typename DoFHandler<dim>::cell_iterator neighbor_child = cell->neighbor_child_on_subface(face_no, subface_no);
 
+                            double h_e = cell->neighbor_child_on_subface(face_no, subface_no)->diameter();
+                            penalty_term = gamma_penal / h_e;
                             Assert(!neighbor_child->has_children(), ExcInternalError());
 
                             fe_subface_values.reinit(cell, face_no, subface_no);
@@ -305,12 +308,12 @@ void BiotSystem::assemble_system_pressure_eg()
                             {
                                 //for (unsigned int q=0; q<n_face_q_points; ++q){
                                 // xueying : assign perm values
-                                d_Big_K = permeability.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
-                                d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
+                                d_Big_K = permeability.value(fe_subface_values.quadrature_point(q), 0) / mu_f;
+                                d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0) / mu_f;
                                 if (test_case == TestCase::heterogeneous)
                                 {
-                                    d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
-                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
+                                    d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q), 0) / mu_f;
+                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0) / mu_f;
                                 }
                                 // ADDED harmonic averaging of perm in the penalty term
                                 double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
@@ -367,6 +370,8 @@ void BiotSystem::assemble_system_pressure_eg()
                     {
                         const unsigned int neighbor_face = cell->neighbor_of_neighbor(face_no);
 
+                        double h_e = cell->face(face_no)->diameter();
+                        penalty_term = gamma_penal / h_e;
                         //DEBUG - necessary ?
                         fe_face_values.reinit(cell, face_no);
                         fe_face_values_neighbor.reinit(neighbor, neighbor_face);
@@ -380,12 +385,12 @@ void BiotSystem::assemble_system_pressure_eg()
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
                             // xueying : assign perm values
-                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0)/mu_f;
-                            d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
+                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0) / mu_f;
+                            d_Big_K_neighbor = permeability.value(fe_face_values_neighbor.quadrature_point(q), 0) / mu_f;
                             if (test_case == TestCase::heterogeneous)
                             {
-                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0)/mu_f;
-                                d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0)/mu_f;
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0) / mu_f;
+                                d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q), 0) / mu_f;
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
@@ -447,6 +452,8 @@ void BiotSystem::assemble_system_pressure_eg()
                         //i.e. neighbor is coarser than cell
                         std::pair<unsigned int, unsigned int> neighbor_face_subface = cell->neighbor_of_coarser_neighbor(face_no);
 
+                        double h_e = cell->face(face_no)->diameter();
+                        penalty_term = gamma_penal / h_e;
                         Assert(neighbor_face_subface.first < GeometryInfo<dim>::faces_per_cell, ExcInternalError());
                         Assert(neighbor_face_subface.second < neighbor->face(neighbor_face_subface.first)->number_of_children(), ExcInternalError());
                         Assert(neighbor->neighbor_child_on_subface(neighbor_face_subface.first, neighbor_face_subface.second) == cell, ExcInternalError());
@@ -467,12 +474,12 @@ void BiotSystem::assemble_system_pressure_eg()
                         for (unsigned int q = 0; q < n_face_q_points; ++q)
                         {
                             //xueying : assign perm values
-                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0)/mu_f;
-                            d_Big_K_neighbor = permeability.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
+                            d_Big_K = permeability.value(fe_face_values.quadrature_point(q), 0) / mu_f;
+                            d_Big_K_neighbor = permeability.value(fe_subface_values.quadrature_point(q), 0) / mu_f;
                             if (test_case == TestCase::heterogeneous)
                             {
-                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0)/mu_f;
-                                d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0)/mu_f;
+                                d_Big_K = perm_function.value(fe_face_values.quadrature_point(q), 0) / mu_f;
+                                d_Big_K_neighbor = perm_function.value(fe_subface_values.quadrature_point(q), 0) / mu_f;
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);

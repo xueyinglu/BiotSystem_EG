@@ -52,6 +52,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
     cell_eta_p = 0;
     for (; cell != endc; ++cell, ++cell_displacement, ++cell_output)
     {
+        double h_E = cell->diameter();
         fe_value_pressure.reinit(cell);
         fe_value_displacement.reinit(cell_displacement);
         fe_value_pressure.get_function_gradients(solution_pressure, grad_p_values);
@@ -68,7 +69,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
         for (unsigned int q = 0; q < n_q_points; q++)
         {
             Tensor<1, dim> cell_difference = grad_p_values[q][0] + grad_p_values[q][1] - prev_timestep_grad_p_values[q][0] - prev_timestep_grad_p_values[q][1];
-            eta_t_p_n += permeability_values[q] *
+            eta_t_p_n += del_t / 3 * permeability_values[q] *
                          cell_difference.norm_square() *
                          fe_value_pressure.JxW(q);
             cell_eta_p[output_dofs[0]] += permeability_values[q] *
@@ -76,12 +77,10 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
 
             double cell_residual = (1 / mu_f * permeability_values[q] * (laplacian_p_values[q][0] + laplacian_p_values[q][1]) - biot_inv_M / del_t * (p_values[q][0] + p_values[q][1] - prev_timestep_p_values[q][0] - prev_timestep_p_values[q][1]) - biot_alpha / del_t * (grad_u_values[q][0][0] + grad_u_values[q][1][1] - prev_timestep_grad_u_values[q][0][0] - prev_timestep_grad_u_values[q][1][1]));
             // cout << "cell residual = " << cell_residual << endl;
-            eta_E_p_n += cell_residual * cell_residual * fe_value_pressure.JxW(q);
+            eta_E_p_n += h_E * h_E * del_t * cell_residual * cell_residual * fe_value_pressure.JxW(q);
             cell_eta_p[output_dofs[0]] += cell_residual * cell_residual * fe_value_pressure.JxW(q);
         }
     }
-    eta_t_p_n = eta_t_p_n * del_t / 3;
-    eta_E_p_n = eta_E_p_n * h * h * del_t;
 
     /*************************** calculate integrals on the edges ***************************/
     // see notes for the formula
@@ -117,7 +116,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                          ++subface_no)
                     {
                         typename DoFHandler<dim>::cell_iterator neighbor_child = cell->neighbor_child_on_subface(face_no, subface_no);
-
+                        double h_e = cell->neighbor_child_on_subface(face_no, subface_no)->diameter();
                         Assert(!neighbor_child->has_children(), ExcInternalError());
 
                         fe_subface_p.reinit(cell, face_no, subface_no);
@@ -141,16 +140,16 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                             const Tensor<1, dim> &n = fe_subface_p.normal_vector(q);
                             double jump_t = (face_p_values[q][1] - prev_timestep_face_p_values[q][1]) - (neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][1]);
                             double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                            eta_t_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                            eta_pen_n += jump * jump * fe_face_p.JxW(q);
-                            eta_partial_p_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                            eta_p_J_n += jump * jump * fe_face_p.JxW(q);
+                            eta_t_J_n += del_t / 3 * gamma_penal / h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                            eta_pen_n += del_t * gamma_penal / h_e * jump * jump * fe_face_p.JxW(q);
+                            eta_partial_p_J_n += gamma_penal * h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                            eta_p_J_n += gamma_penal * h_e * jump * jump * fe_face_p.JxW(q);
                             double flux_jump = permeability.value(fe_subface_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                             if (test_case == TestCase::heterogeneous)
                             {
                                 flux_jump = perm_function.value(fe_subface_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                             }
-                            eta_flux_e_n += flux_jump * flux_jump * fe_face_p.JxW(q);
+                            eta_flux_e_n += del_t * h_e * flux_jump * flux_jump * fe_face_p.JxW(q);
                             //TODO add the face integrals to the visualization
                             cell_eta_p[output_dofs[0]] += jump_t * jump_t * fe_subface_p.JxW(q);
                             cell_eta_p[output_dofs[0]] += jump * jump * fe_subface_p.JxW(q);
@@ -161,6 +160,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                 else if (!cell->neighbor_is_coarser(face_no))
                 {
                     const typename DoFHandler<dim>::cell_iterator neighbor_p = cell->neighbor(face_no);
+                    double h_e = cell->face(face_no)->diameter();
                     vector<Vector<double>> face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
                     vector<Vector<double>> neighbor_p_values(fe_face_neighbor_p.n_quadrature_points, Vector<double>(2));
                     vector<Vector<double>> prev_timestep_face_p_values(fe_face_p.n_quadrature_points, Vector<double>(2));
@@ -182,16 +182,16 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                         const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
                         double jump_t = (face_p_values[q][1] - prev_timestep_face_p_values[q][1]) - (neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][1]);
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        eta_t_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                        eta_pen_n += jump * jump * fe_face_p.JxW(q);
-                        eta_partial_p_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                        eta_p_J_n += jump * jump * fe_face_p.JxW(q);
+                        eta_t_J_n += del_t / 3 * gamma_penal / h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                        eta_pen_n += del_t * gamma_penal / h_e * jump * jump * fe_face_p.JxW(q);
+                        eta_partial_p_J_n += gamma_penal * h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                        eta_p_J_n += gamma_penal * h_e * jump * jump * fe_face_p.JxW(q);
                         double flux_jump = permeability.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                         if (test_case == TestCase::heterogeneous)
                         {
                             flux_jump = perm_function.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                         }
-                        eta_flux_e_n += flux_jump * flux_jump * fe_face_p.JxW(q);
+                        eta_flux_e_n += del_t * h_e * flux_jump * flux_jump * fe_face_p.JxW(q);
                         //TODO add the face integrals to the visualization
                         cell_eta_p[output_dofs[0]] += jump_t * jump_t * fe_face_p.JxW(q);
                         cell_eta_p[output_dofs[0]] += jump * jump * fe_face_p.JxW(q);
@@ -202,7 +202,7 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                 {
                     const auto neighbor = cell->neighbor(face_no);
                     std::pair<unsigned int, unsigned int> neighbor_face_subface = cell->neighbor_of_coarser_neighbor(face_no);
-
+                    double h_e = cell->face(face_no)->diameter();
                     Assert(neighbor_face_subface.first < GeometryInfo<dim>::faces_per_cell, ExcInternalError());
                     Assert(neighbor_face_subface.second < neighbor->face(neighbor_face_subface.first)->number_of_children(), ExcInternalError());
                     Assert(neighbor->neighbor_child_on_subface(neighbor_face_subface.first, neighbor_face_subface.second) == cell, ExcInternalError());
@@ -230,16 +230,16 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
                         const Tensor<1, dim> &n = fe_face_p.normal_vector(q);
                         double jump_t = (face_p_values[q][1] - prev_timestep_face_p_values[q][1]) - (neighbor_p_values[q][1] - prev_timestep_neighbor_p_values[q][1]);
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        eta_t_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                        eta_pen_n += jump * jump * fe_face_p.JxW(q);
-                        eta_partial_p_J_n += jump_t * jump_t * fe_face_p.JxW(q);
-                        eta_p_J_n += jump * jump * fe_face_p.JxW(q);
+                        eta_t_J_n += del_t / 3 * gamma_penal / h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                        eta_pen_n += del_t * gamma_penal / h_e * jump * jump * fe_face_p.JxW(q);
+                        eta_partial_p_J_n += gamma_penal * h_e * jump_t * jump_t * fe_face_p.JxW(q);
+                        eta_p_J_n += gamma_penal * h_e * jump * jump * fe_face_p.JxW(q);
                         double flux_jump = permeability.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                         if (test_case == TestCase::heterogeneous)
                         {
                             flux_jump = perm_function.value(fe_face_p.quadrature_point(q), 0) * ((face_grad_p_values[q][0] + face_grad_p_values[q][1]) * n - (neighbor_grad_p_values[q][0] + neighbor_grad_p_values[q][1]) * n);
                         }
-                        eta_flux_e_n += flux_jump * flux_jump * fe_face_p.JxW(q);
+                        eta_flux_e_n += del_t * h_e * flux_jump * flux_jump * fe_face_p.JxW(q);
                         //TODO add the face integrals to the visualization
                         cell_eta_p[output_dofs[0]] += jump_t * jump_t * fe_face_p.JxW(q);
                         cell_eta_p[output_dofs[0]] += jump * jump * fe_face_p.JxW(q);
@@ -249,11 +249,12 @@ void BiotSystem::calc_a_posteriori_indicators_p_eg()
             }
         }
     }
-    eta_t_J_n = del_t / 3 * gamma_penal / min_cell_diameter * eta_t_J_n;
-    eta_pen_n = del_t * gamma_penal / min_cell_diameter * eta_pen_n;
-    eta_partial_p_J_n = sqrt(gamma_penal * min_cell_diameter * eta_partial_p_J_n);
-    eta_p_J_n = gamma_penal * min_cell_diameter * eta_p_J_n;
-    eta_flux_e_n = eta_flux_e_n * h * del_t;
+    //eta_t_J_n = del_t / 3 * gamma_penal / min_cell_diameter * eta_t_J_n;
+    //eta_pen_n = del_t * gamma_penal / min_cell_diameter * eta_pen_n;
+    //eta_partial_p_J_n = sqrt(gamma_penal * min_cell_diameter * eta_partial_p_J_n);
+    //eta_p_J_n = gamma_penal * min_cell_diameter * eta_p_J_n;
+    //eta_flux_e_n = eta_flux_e_n * h * del_t;
+    eta_partial_p_J_n = sqrt(eta_partial_p_J_n);
 
     /*************************** calculate eta_time ***************************/
     if (timestep == 1)
