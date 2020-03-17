@@ -2,7 +2,7 @@
 #include "AuxTools.h"
 using namespace std;
 // check the convergence of fixed stress, return the residual
-double BiotSystem::check_fs_convergence()
+vector<double> BiotSystem::check_fs_convergence()
 {
     QGauss<dim> quadrature_pressure(degree + 1);
     QGauss<dim> quadrature_displacement(fe_displacement.degree + 1);
@@ -54,17 +54,20 @@ double BiotSystem::check_fs_convergence()
     }
     //cout << "fixed stress iteration convergence criteria = " << sqrt(residual/l2square_mean_stress) << endl;
 
-    double change_ms = 0;
+    double change_ms = sqrt(residual);;
+    double rel_change_ms = sqrt(residual / l2square_mean_stress);
     if (criteria != 2)
     {
-        change_ms = sqrt(residual);
+        
         cout << "fixed stress iteration convergence criteria 1 = " << change_ms << endl;
     }
     else if (criteria == 2)
     {
-        change_ms = sqrt(residual / l2square_mean_stress);
+        
         cout << "fixed stress iteration convergence criteria 2 = " << change_ms << endl;
     }
-    // return ;
-    return change_ms;
+    vector<double> results;
+    results.push_back(change_ms);
+    results.push_back(rel_change_ms);
+    return results;
 }

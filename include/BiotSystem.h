@@ -168,7 +168,7 @@ private:
 
     void fixed_stress_iteration();
 
-    double check_fs_convergence(); // check the convergence of fixed-stress iteration
+    vector<double> check_fs_convergence(); // check the convergence of fixed-stress iteration
 
     void output_displacement(int timestep, int fs_count) const;
     void output_pressure(int timestep, int fs_count) const;
