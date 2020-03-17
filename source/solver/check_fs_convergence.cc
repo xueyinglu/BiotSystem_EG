@@ -64,7 +64,7 @@ vector<double> BiotSystem::check_fs_convergence()
     else if (criteria == 2)
     {
         
-        cout << "fixed stress iteration convergence criteria 2 = " << change_ms << endl;
+        cout << "fixed stress iteration convergence criteria 2 = " << rel_change_ms << endl;
     }
     vector<double> results;
     results.push_back(change_ms);
