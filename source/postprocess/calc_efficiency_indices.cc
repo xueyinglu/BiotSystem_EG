@@ -27,6 +27,6 @@ void BiotSystem::calc_efficiency_indices()
     efficiency_table.set_scientific("index", true);
     efficiency_table.set_scientific("sqrt_eta_sum", true);
     efficiency_table.set_tex_table_caption("Efficiency Index: $h = 1/(2^" + to_string(num_global_refinement) + "), \\Delta t = " + to_string(del_t) + "$");
-    ofstream efficiency_table_file("efficiency-" + to_string(num_global_refinement) + "-" + to_string(del_t) + ".tex");
+    ofstream efficiency_table_file(filename_base + "-efficiency-" + to_string(num_global_refinement) + "-" + to_string(del_t) + ".tex");
     efficiency_table.write_tex(efficiency_table_file, false);
 }

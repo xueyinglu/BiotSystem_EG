@@ -10,6 +10,7 @@ void BiotSystem::calc_p_h_norm()
     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler_pressure.begin_active(),
                                                    endc = dof_handler_pressure.end();
     double h_norm_p_sq = 0;
+    double jump_err =0;
     const unsigned int n_q_points = quadrature_pressure.size();
     vector<vector<Tensor<1, dim>>> grad_p_values(n_q_points, vector<Tensor<1, dim>>(2));
     vector<double> permeability_values(n_q_points);
@@ -25,13 +26,12 @@ void BiotSystem::calc_p_h_norm()
         for (unsigned int q = 0; q < n_q_points; q++)
         {
             Tensor<1, dim> true_grad_p;
-            if (test_case == TestCase::benchmark)
-            {
-                PressureSolution(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+            if (test_case == TestCase::benchmark){
+            PressureSolution(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
             }
-            else if (test_case == TestCase::mandel)
-            {
-                MandelPressure(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+            else if (test_case == TestCase::mandel){
+            MandelPressure(t).gradient_value(fe_value_pressure.quadrature_point(q), true_grad_p);
+
             }
             h_norm_p_sq += permeability_values[q] * (grad_p_values[q][0] + grad_p_values[q][1] - true_grad_p).norm_square() * fe_value_pressure.JxW(q);
         }
@@ -76,7 +76,7 @@ void BiotSystem::calc_p_h_norm()
                         for (unsigned int q = 0; q < fe_subface_p.n_quadrature_points; q++)
                         {
                             double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                            h_norm_p_sq += jump * jump * fe_subface_p.JxW(q);
+                            jump_err+= jump *jump *fe_subface_p.JxW(q);
                         }
                     }
                 }
@@ -94,7 +94,7 @@ void BiotSystem::calc_p_h_norm()
                     for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
                     {
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        h_norm_p_sq += jump * jump * fe_face_p.JxW(q);
+                        jump_err+= jump *jump *fe_face_p.JxW(q);
                     }
                 }
                 else
@@ -117,12 +117,13 @@ void BiotSystem::calc_p_h_norm()
                     for (unsigned int q = 0; q < fe_face_p.n_quadrature_points; q++)
                     {
                         double jump = face_p_values[q][1] - neighbor_p_values[q][1];
-                        h_norm_p_sq += jump * jump * fe_face_p.JxW(q);
+                        jump_err+= jump *jump *fe_face_p.JxW(q);
                     }
                 }
             }
         }
     }
-
-    h_error_p_sq.push_back(h_norm_p_sq);
+    cout << "h_norm_p_sq = " << h_norm_p_sq << endl;
+    cout << "jump_err = " << jump_err << endl;
+    h_error_p_sq.push_back(h_norm_p_sq + gamma_penal/min_cell_diameter*jump_err);
 }
