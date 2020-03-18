@@ -26,7 +26,10 @@ void BiotSystem::set_control_parameters()
     else if (prm.get("Test case") == "mandel")
     {
         test_case = TestCase::mandel;
-        h = sqrt(100.0 * 100.0 + 10.0 * 10.0) / pow(2, num_global_refinement);
+        // Bin Wang Data
+        // h = sqrt(100.0 * 100.0 + 10.0 * 10.0) / pow(2, num_global_refinement);
+        // Phillips Phillips Data
+        h = sqrt(2.0) / pow(2, num_global_refinement);
         min_cell_diameter = h;
     }
     else if (prm.get("Test case") == "heterogeneous")

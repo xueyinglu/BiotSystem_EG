@@ -4,32 +4,6 @@ using namespace std;
 void MandelDisplacement::vector_value(const Point<dim> &p, Vector<double> &values) const
 {
 
-    double PI = atan(1) * 4;
-    // Data from Bin Wang
-    // computational domain is axb
-    double a = 100;
-    double b = 10;
-    double k = 1e-13;
-    double mu_f = 1e-3;
-    double F = 5.94e8;
-    double E = 5.94e9;
-    double nu = 0.2;
-    double alpha = 1;
-    // c_0 = inv_M;
-    double c_0 = 1.0 / 1.65e10;
-    double lambda = E * nu / (1 + nu) / (1 - 2 * nu);
-    double mu = E / 2 / (1 + nu);
-    double K_bulk = lambda + 2. / 3 * mu;
-    double K_u = K_bulk + alpha * alpha / c_0;
-    // fluid diffusivity coefficient
-    double c_f = 1. / c_0 * k / mu_f * (K_bulk + 4. / 3 * mu) / (K_u + 4. / 3 * mu);
-    // Skempton's coefficient
-    // double B = alpha / c_0 / K_u;
-    double B = 5.0 / 6;
-    // undrained Poisson's ratio
-    // double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
-    double nu_u = 0.44;
-    double cc = (1 - nu) / (nu_u - nu);
     // solve tan(a_n) = (1-nu)/(nu_u-nu)*a_n numerically
     vector<double> vector_a;
     vector_a.push_back(0);
@@ -89,32 +63,6 @@ void MandelDisplacement::vector_value(const Point<dim> &p, Vector<double> &value
 }
 void MandelDisplacement::gradient_value(const Point<dim> &point, Tensor<2, dim> &gradient) const
 {
-    double PI = atan(1) * 4;
-    // Data from Bin Wang
-    // computational domain is axb
-    double a = 100;
-    double b = 10;
-    double k = 1e-13;
-    double mu_f = 1e-3;
-    double F = 5.94e8;
-    double E = 5.94e9;
-    double nu = 0.2;
-    double alpha = 1;
-    // c_0 = inv_M;
-    double c_0 = 1.0 / 1.65e10;
-    double lambda = E * nu / (1 + nu) / (1 - 2 * nu);
-    double mu = E / 2 / (1 + nu);
-    double K_bulk = lambda + 2. / 3 * mu;
-    double K_u = K_bulk + alpha * alpha / c_0;
-    // fluid diffusivity coefficient
-    double c_f = 1. / c_0 * k / mu_f * (K_bulk + 4. / 3 * mu) / (K_u + 4. / 3 * mu);
-    // Skempton's coefficient
-    // double B = alpha / c_0 / K_u;
-    double B = 5.0 / 6;
-    // undrained Poisson's ratio
-    // double nu_u = (3*nu + alpha* B *(1-2*nu))/(3-alpha*B*(1-2*nu));
-    double nu_u = 0.44;
-    double cc = (1 - nu) / (nu_u - nu);
     // solve tan(a_n) = (1-nu)/(nu_u-nu)*a_n numerically
     vector<double> vector_a;
     vector_a.push_back(0);
