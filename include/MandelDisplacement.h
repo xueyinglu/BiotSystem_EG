@@ -39,7 +39,7 @@ private:
     double nu = 0.2;
     double alpha = 1;
     // c_0 = inv_M;
-    double c_0 = 0.1;
+    double c_0 = 1e-4;
 
     double PI = atan(1) * 4;
     double lambda = E * nu / (1 + nu) / (1 - 2 * nu);

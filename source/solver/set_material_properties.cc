@@ -71,7 +71,7 @@ void BiotSystem::set_material_properties()
         double E = 1.0e4;
         double nu =0.2;
         biot_alpha =1.0;
-        biot_inv_M = 0.1;
+        biot_inv_M = 1e-4;
         
         permeability = ConstantFunction<dim>(perm);
         double lame_lambda = E * nu / (1 + nu) / (1 - 2 * nu);

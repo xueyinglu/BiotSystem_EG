@@ -5,6 +5,7 @@ void MandelDisplacement::vector_value(const Point<dim> &p, Vector<double> &value
 {
 
     // solve tan(a_n) = (1-nu)/(nu_u-nu)*a_n numerically
+    cout <<"cc = " << cc << endl;
     vector<double> vector_a;
     vector_a.push_back(0);
     double n_terms = 50;
@@ -38,7 +39,7 @@ void MandelDisplacement::vector_value(const Point<dim> &p, Vector<double> &value
         }
         vector_a.push_back(x0);
         error_mod = 1.0;
-        left = x0 + PI;
+        left = n* PI;
         right = (n + 0.5) * PI;
         middle = (left + right) / 2.0;
     }
