@@ -118,7 +118,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                             neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
                             neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
                             Tensor<1, dim> dum6 = (face_sigma - biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma - biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
-                            eta_e_sigma += h_e *dum6.norm_square() * fe_subface_u.JxW(q);
+                            eta_e_sigma += h_e * dum6.norm_square() * fe_subface_u.JxW(q);
                             cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_subface_u.JxW(q);
                         }
                     }
@@ -185,7 +185,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
                         neighbor_E = 0.5 * (neighbor_grad_u + transpose(neighbor_grad_u));
                         neighbor_sigma = 2 * mu_values[q] * neighbor_E + lambda_values[q] * trace(neighbor_E) * identity;
                         Tensor<1, dim> dum6 = (face_sigma - biot_alpha * (face_p_values[q][0] + face_p_values[q][1]) * identity) * n - (neighbor_sigma - biot_alpha * (neighbor_p_values[q][0] + neighbor_p_values[q][1]) * identity) * n;
-                        eta_e_sigma += h_e *dum6.norm_square() * fe_face_u.JxW(q);
+                        eta_e_sigma += h_e * dum6.norm_square() * fe_face_u.JxW(q);
                         cell_eta_u[output_dofs[0]] += dum6.norm_square() * fe_face_u.JxW(q);
                     }
                 }
@@ -394,7 +394,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
             dum3[0] = (2 * mu_values[q] + lambda_values[q]) * (hessian_u_values[q][0][0][0] - prev_timestep_hessian_u_values[q][0][0][0]) + (lambda_values[q] + mu_values[q]) * (hessian_u_values[q][1][0][1] - prev_timestep_hessian_u_values[q][1][0][1]) + mu_values[q] * (hessian_u_values[q][0][1][1] - prev_timestep_hessian_u_values[q][0][1][1]) - biot_alpha * (grad_p_values[q][0][0] + grad_p_values[q][1][0] - prev_timestep_grad_p_values[q][0][0] - prev_timestep_grad_p_values[q][1][0]);
             dum3[1] = (2 * mu_values[q] + lambda_values[q]) * (hessian_u_values[q][1][1][1] - prev_timestep_hessian_u_values[q][1][1][1]) + (lambda_values[q] + mu_values[q]) * (hessian_u_values[q][0][0][1] - prev_timestep_hessian_u_values[q][0][0][1]) + mu_values[q] * (hessian_u_values[q][1][0][0] - prev_timestep_hessian_u_values[q][1][0][0]) - biot_alpha * (grad_p_values[q][0][1] + grad_p_values[q][1][1] - prev_timestep_grad_p_values[q][0][1] - prev_timestep_grad_p_values[q][1][1]);
 
-            eta_E_partial_u += h_E *h_E* dum3.norm_square() * fe_value_displacement.JxW(q);
+            eta_E_partial_u += h_E * h_E * dum3.norm_square() * fe_value_displacement.JxW(q);
             cell_eta_u[output_dofs[0]] += dum3.norm_square() * fe_value_displacement.JxW(q);
             Tensor<1, dim> dum5;
             dum5[0] = (2 * mu_values[q] + lambda_values[q]) * hessian_u_values[q][0][0][0] + (lambda_values[q] + mu_values[q]) * hessian_u_values[q][1][0][1] + mu_values[q] * hessian_u_values[q][0][1][1] - biot_alpha * (grad_p_values[q][0][0] + grad_p_values[q][1][0]);
@@ -405,7 +405,7 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     }
 
     // eta_E_partial_u = sqrt(eta_E_partial_u) * h;
-    eta_E_partial_u = sqrt(eta_E_partial_u) ;
+    eta_E_partial_u = sqrt(eta_E_partial_u);
     eta_partial_u_n.push_back(eta_E_partial_u);
     double dum4 = 0;
     for (auto &n : eta_partial_u_n)
@@ -433,11 +433,14 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     u_indicators_table.add_value("sum", eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back() + eta_u.back());
     // u_indicators_table.add_value("error", l2_error_u.back());
     // u_indicators_table.add_value("eff", (eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back()+eta_u.back())/ l2_error_u.back() );
-    cout <<"eta_u.back() =" << eta_u.back() <<endl;
-    DataOut<dim> data_out;
-    data_out.attach_dof_handler(dof_handler_output);
-    data_out.add_data_vector(cell_eta_u, "eta_E_u", DataOut<dim>::type_dof_data);
-    data_out.build_patches();
-    ofstream output("visual/"+filename_base+"-indicators-u" + to_string(timestep) + ".vtk");
-    data_out.write_vtk(output);
+    cout << "eta_u.back() =" << eta_u.back() << endl;
+    if (timestep % output_frequency == 0)
+    {
+        DataOut<dim> data_out;
+        data_out.attach_dof_handler(dof_handler_output);
+        data_out.add_data_vector(cell_eta_u, "eta_E_u", DataOut<dim>::type_dof_data);
+        data_out.build_patches();
+        ofstream output("visual/" + filename_base + "-indicators-u" + to_string(timestep) + ".vtk");
+        data_out.write_vtk(output);
+    }
 }
