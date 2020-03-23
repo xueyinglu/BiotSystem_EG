@@ -16,11 +16,11 @@ void BiotSystem::output_error() {
     convergence_table.write_tex(error_table_file);
 
     
-    p_indicators_table.set_precision("eta_alg", 6);
-    p_indicators_table.set_precision("eta_time", 6);
-    p_indicators_table.set_precision("eta_flow", 6);
-    p_indicators_table.set_precision("eta_jump", 6);
-    p_indicators_table.set_precision("sum", 6);
+    p_indicators_table.set_precision("eta_alg", 4);
+    p_indicators_table.set_precision("eta_time", 4);
+    p_indicators_table.set_precision("eta_flow", 4);
+    p_indicators_table.set_precision("eta_jump", 4);
+    p_indicators_table.set_precision("sum", 4);
     // p_indicators_table.set_precision("error", 6);
     
     p_indicators_table.set_scientific("eta_alg",true);
@@ -35,11 +35,11 @@ void BiotSystem::output_error() {
     p_indicators_table.set_tex_caption("eta_jump", "$\\eta_{\\text{jump}}$");
     p_indicators_table.set_tex_table_caption("Flow indicators: $h = 1/(2^" + to_string(num_global_refinement)+ "), \\Delta t = " + to_string(del_t) +"$"); 
     
-    u_indicators_table.set_precision("eta_face_partial_sigma", 6);
-    u_indicators_table.set_precision("eta_face_sigma", 6);
-    u_indicators_table.set_precision("eta_partial_u", 6);
-    u_indicators_table.set_precision("eta_u", 6);
-    u_indicators_table.set_precision("sum", 6);
+    u_indicators_table.set_precision("eta_face_partial_sigma", 4);
+    u_indicators_table.set_precision("eta_face_sigma", 4);
+    u_indicators_table.set_precision("eta_partial_u", 4);
+    u_indicators_table.set_precision("eta_u", 4);
+    u_indicators_table.set_precision("sum", 4);
     // u_indicators_table.set_precision("error", 6);
     // u_indicators_table.set_precision("eff", 6);
     u_indicators_table.set_scientific("eta_face_partial_sigma", true);
