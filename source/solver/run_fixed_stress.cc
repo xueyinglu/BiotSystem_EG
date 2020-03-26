@@ -72,8 +72,8 @@ void BiotSystem::run_fixed_stress()
 
     for (timestep = 1; timestep < (T / del_t +1); timestep++)
     {
-        cout << "---------------- timestep = " << timestep << "------------------------" << endl;
         t += del_t;
+        cout << "--------------------- timestep = " << timestep << ", t = "<< t << "------------------------" << endl;
         fixed_stress_iteration();
 
         if (criteria != 3)
