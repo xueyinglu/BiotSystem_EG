@@ -3,8 +3,8 @@
 void BiotSystem::solve_pressure_eg(){
     LA::MPI::BlockVector sol(system_rhs_pressure);
 
-    //SolverControl solver_control(10000, 1e-10 * system_rhs_pressure.l2_norm());
-    SolverControl solver_control(10000, 1e-12);
+    SolverControl solver_control(10000, 1e-10 * system_rhs_pressure.l2_norm());
+    // SolverControl solver_control(10000, 1e-12);
     SolverGMRES<LA::MPI::BlockVector> solver(solver_control);
 
     {
