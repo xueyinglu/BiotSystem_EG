@@ -7,6 +7,8 @@ void BiotSystem::set_control_parameters()
     h = sqrt(2.0) / pow(2, num_global_refinement);
     min_cell_diameter = h;
     cout << "h=" << h << endl;
+    T0 = prm.get_double("Initial time");
+    t = T0;
     T = prm.get_double("Final time");
     del_t = prm.get_double("Timestep size");
     criteria = prm.get_integer("Fixed-stress criteria");

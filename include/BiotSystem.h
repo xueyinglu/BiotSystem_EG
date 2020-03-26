@@ -35,7 +35,9 @@ private:
     MPI_Comm mpi_com;
     ParameterHandler &prm;
     double del_t = 0.01;
-    double T = 1;
+    
+    double T0 =0.0;     // initial time
+    double T = 1;       // final time
     double t = 0;
     int timestep = 0;
     int num_global_refinement = 5;

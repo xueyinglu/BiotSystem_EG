@@ -21,6 +21,8 @@ void ParameterReader::declare_parameters()
         prm.declare_entry("Global refinement numbers", "3",
                           Patterns::Integer(0));
         
+        prm.declare_entry("Initial time", "1.0", Patterns::Double(0));
+        
         prm.declare_entry("Final time", "1.0", Patterns::Double(0));
 
         prm.declare_entry("Timestep size", "1.0", Patterns::Double(0));
