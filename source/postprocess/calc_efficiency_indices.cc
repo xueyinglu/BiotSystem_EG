@@ -20,9 +20,10 @@ void BiotSystem::calc_efficiency_indices()
     efficiency_table.add_value("error", sqrt(error_sq));
     efficiency_table.add_value("index", I_eff);
 
-    efficiency_table.set_precision("error", 6);
-    efficiency_table.set_precision("index", 6);
-    efficiency_table.set_precision("sqrt_eta_sum", 6);
+    efficiency_table.set_precision("error", 4);
+    efficiency_table.set_precision("index", 4);
+    efficiency_table.set_precision("sqrt_eta_sum", 4);
+    efficiency_table.set_scientific("time", true);
     efficiency_table.set_scientific("error", true);
     efficiency_table.set_scientific("index", true);
     efficiency_table.set_scientific("sqrt_eta_sum", true);
