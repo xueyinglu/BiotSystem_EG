@@ -77,6 +77,7 @@ void BiotSystem::set_material_properties()
         double lame_lambda = E * nu / (1 + nu) / (1 - 2 * nu);
         double lame_mu = E / 2 / (1 + nu);
         K_b = lame_lambda + 2. / 3 * lame_mu;
+        // biot_inv_M = K_b/(1-biot_alpha)/(biot_alpha - phi0);
         lambda = ConstantFunction<dim>(lame_lambda);
         mu = ConstantFunction<dim>(lame_mu);
         traction_bc[0] = 0;
