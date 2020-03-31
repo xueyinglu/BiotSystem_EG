@@ -30,6 +30,8 @@ vector<double> BiotSystem::check_fs_convergence()
     double prev_fs_mean_stress;
     double residual = 0.0;
     double l2square_mean_stress = 0.0;
+    double linf_change_ms = 0.0;
+    double linf_rel_change_ms = 0.0;
 
     for (; cell != endc; ++cell, ++cell_displacement)
     {
@@ -50,24 +52,32 @@ vector<double> BiotSystem::check_fs_convergence()
             prev_fs_mean_stress = K_b * prev_fs_div_u - biot_alpha * (prev_fs_sol_pressure_values[q][0] + prev_fs_sol_pressure_values[q][1]);
             residual += (mean_stress - prev_fs_mean_stress) * (mean_stress - prev_fs_mean_stress) * fe_value_pressure.JxW(q);
             l2square_mean_stress += mean_stress * mean_stress * fe_value_pressure.JxW(q);
+            if(abs(mean_stress - prev_fs_mean_stress) > linf_change_ms){
+                linf_change_ms = abs(mean_stress - prev_fs_mean_stress);
+            }
+            if (abs((mean_stress - prev_fs_mean_stress)/prev_fs_mean_stress) > linf_rel_change_ms){
+                linf_rel_change_ms = abs((mean_stress - prev_fs_mean_stress)/prev_fs_mean_stress);
+            }
         }
     }
     //cout << "fixed stress iteration convergence criteria = " << sqrt(residual/l2square_mean_stress) << endl;
 
-    double change_ms = sqrt(residual);;
+    double l2_change_ms = sqrt(residual);
+
     double rel_change_ms = sqrt(residual / l2square_mean_stress);
-    if (criteria != 2)
+    if (criteria ==1 )
     {
         
-        cout << "fixed stress iteration convergence criteria 1 = " << change_ms << endl;
+        cout << "fs convergence criteria 1: L_inf_change_ms=" << linf_change_ms << endl;
     }
     else if (criteria == 2)
     {
         
-        cout << "fixed stress iteration convergence criteria 2 = " << rel_change_ms << endl;
+        cout << "fs convergence criteria 2: L_inf_rel_change_ms=" << linf_rel_change_ms << endl;
     }
     vector<double> results;
-    results.push_back(change_ms);
-    results.push_back(rel_change_ms);
+    results.push_back(l2_change_ms);
+    results.push_back(linf_change_ms);
+    results.push_back(linf_rel_change_ms);
     return results;
 }

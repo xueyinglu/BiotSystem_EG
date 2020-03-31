@@ -20,11 +20,11 @@ void BiotSystem::fixed_stress_iteration()
         fs_change = check_fs_convergence();
         if (criteria == 1)
         {
-            iteration = (fs_change[0] > tol_fixed_stress);
+            iteration = (fs_change[1] > tol_fixed_stress);
         }
         else if (criteria == 2)
         {
-            iteration = (fs_change[1] > tol_fixed_stress);
+            iteration = (fs_change[2] > tol_fixed_stress);
         }
         else
         {
