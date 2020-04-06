@@ -150,13 +150,18 @@ void BiotSystem::assemble_system_pressure_eg()
 
                 if (test_case == TestCase::heterogeneous)
                 {
+
                     // add a well term
+                    /* ARMA paper */ /*
                     Point<2> well1 = Point<2>(0.5, 0.25 - 1. / 128);
                     Point<2> well2 = Point<2>(0.5, 0.5 - 1. / 128);
                     Point<2> well3 = Point<2>(0.5, 0.75 - 1. / 128);
+                    */
+                    Point<2> well1 = Point<2>(0.5, 21. / 64 + 1. / 128);
+                    Point<2> well2 = Point<2>(0.5, 42. / 64 + 1. / 128);
                     if (fe_value.quadrature_point(q).distance(well1) < 1. / 128 ||
-                        fe_value.quadrature_point(q).distance(well2) < 1. / 128 ||
-                        fe_value.quadrature_point(q).distance(well3) < 1. / 128)
+                        fe_value.quadrature_point(q).distance(well2) < 1. / 128 )//||
+                        //fe_value.quadrature_point(q).distance(well3) < 1. / 128)
                     {
                         cell_rhs(i) +=
                             (fe_value.shape_value(i, q) * // phi_i(x_q)

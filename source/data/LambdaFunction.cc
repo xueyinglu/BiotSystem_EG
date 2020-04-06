@@ -8,6 +8,7 @@ double LambdaFunction::value(const Point<dim> &p, const unsigned int component) 
     double x = p(0);
     double y = p(1);
     
+    /* ARMA paper */ /*
     if (x >= 0.2 && x <= 0.8 && y >= 0.5 - 1. / 64 && y <= 0.5)
     {
         E = 1e4;
@@ -19,6 +20,38 @@ double LambdaFunction::value(const Point<dim> &p, const unsigned int component) 
         nu = 0.05;
     }
     if (x >= 0.2 && x <= 0.8 && y >= 0.75 - 1. / 64 && y <= 0.75)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+    */
+    if (x >= 12. / 64 && x <= 52. / 64 && y >= 21. / 64 && y <= 22. / 64)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+    if (x >= 12. / 64 && x <= 52. / 64 && y >= 42. / 64 && y <= 43. / 64)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+
+    if (x >= 21. / 64 && x <= 22. / 64 && y >= 12. / 64 && y <= 25. / 64)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+    if (x >= 42. / 64 && x <= 43. / 64 && y >= 12. / 64 && y <= 25. / 64)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+    if (x >= 21. / 64 && x <= 22. / 64 && y >= 39. / 64 && y <= 42. / 64)
+    {
+        E = 1e4;
+        nu = 0.05;
+    }
+    if (x >= 42. / 64 && x <= 43. / 64 && y >= 39. / 64 && y <= 42. / 64)
     {
         E = 1e4;
         nu = 0.05;
