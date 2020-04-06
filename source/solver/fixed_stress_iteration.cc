@@ -31,7 +31,18 @@ void BiotSystem::fixed_stress_iteration()
             eta_fs.push_back(1 / sqrt(del_t) * fs_change[0]);
             calc_a_posteriori_indicators_p_eg();
             calc_a_posteriori_indicators_u();
-            iteration = (eta_alg.back() > 0.1 * min(eta_flow.back() + eta_time.back() + eta_jump.back(), eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back() + eta_u.back()));
+            if (criteria == 3)
+            {
+
+                iteration = (eta_alg.back() > 0.1 * min(eta_flow.back() + eta_time.back() + eta_jump.back(),
+                                                        eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back() + eta_u.back()));
+            }
+            else if (criteria == 4)
+            {
+
+                iteration = (eta_alg.back() > 0.1 * (eta_flow.back() + eta_time.back() + eta_jump.back() +
+                                                     eta_face_partial_sigma.back() + eta_face_sigma.back() + eta_partial_u.back() + eta_u.back()));
+            }
             if (iteration)
             {
                 eta_fs.pop_back();
