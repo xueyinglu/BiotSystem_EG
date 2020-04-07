@@ -160,8 +160,8 @@ void BiotSystem::assemble_system_pressure_eg()
                     Point<2> well1 = Point<2>(0.5, 21. / 64 + 1. / 128);
                     Point<2> well2 = Point<2>(0.5, 42. / 64 + 1. / 128);
                     if (fe_value.quadrature_point(q).distance(well1) < 1. / 128 ||
-                        fe_value.quadrature_point(q).distance(well2) < 1. / 128 )//||
-                        //fe_value.quadrature_point(q).distance(well3) < 1. / 128)
+                        fe_value.quadrature_point(q).distance(well2) < 1. / 128) //||
+                    //fe_value.quadrature_point(q).distance(well3) < 1. / 128)
                     {
                         cell_rhs(i) +=
                             (fe_value.shape_value(i, q) * // phi_i(x_q)
@@ -296,7 +296,6 @@ void BiotSystem::assemble_system_pressure_eg()
                             typename DoFHandler<dim>::cell_iterator neighbor_child = cell->neighbor_child_on_subface(face_no, subface_no);
 
                             double h_e = cell->neighbor_child_on_subface(face_no, subface_no)->diameter();
-                            penalty_term = gamma_penal / h_e;
                             Assert(!neighbor_child->has_children(), ExcInternalError());
 
                             fe_subface_values.reinit(cell, face_no, subface_no);
@@ -323,6 +322,11 @@ void BiotSystem::assemble_system_pressure_eg()
                                 // ADDED harmonic averaging of perm in the penalty term
                                 double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                                 double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                                if (beta_e != 0.5)
+                                {
+                                    gamma_penal = 1.0;
+                                }
+                                penalty_term = gamma_penal / h_e;
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
                                     phi_i_p_face_neighbor[k] = fe_face_values_neighbor[pressure_dg].value(k, q);
@@ -376,7 +380,6 @@ void BiotSystem::assemble_system_pressure_eg()
                         const unsigned int neighbor_face = cell->neighbor_of_neighbor(face_no);
 
                         double h_e = cell->face(face_no)->diameter();
-                        penalty_term = gamma_penal / h_e;
                         //DEBUG - necessary ?
                         fe_face_values.reinit(cell, face_no);
                         fe_face_values_neighbor.reinit(neighbor, neighbor_face);
@@ -399,6 +402,11 @@ void BiotSystem::assemble_system_pressure_eg()
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                            if (beta_e != 0.5)
+                            {
+                                gamma_penal = 1.0;
+                            }
+                            penalty_term = gamma_penal / h_e;
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
 
                             {
@@ -488,6 +496,11 @@ void BiotSystem::assemble_system_pressure_eg()
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
+                            if (beta_e != 0.5)
+                            {
+                                gamma_penal = 1.0;
+                            }
+                            penalty_term = gamma_penal / h_e;
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
                                 phi_i_p_face_neighbor[k] = fe_subface_values[pressure_dg].value(k, q);
