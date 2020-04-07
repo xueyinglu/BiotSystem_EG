@@ -110,6 +110,7 @@ private:
     // EG for flow
     int degree = 1;
     double gamma_penal;
+    double gamma_interface;
     double min_cell_diameter;
     bool bCG_WeaklyBD = true;
     double d_SForm = 0; //SIPG

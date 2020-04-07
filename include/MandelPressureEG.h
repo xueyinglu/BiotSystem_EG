@@ -35,7 +35,7 @@ private:
     double F = 2.0e3;
     double E = 1.0e4;
     double nu = 0.2;
-    double alpha = 1;
+    double alpha = 1.0;
     // c_0 = inv_M;
     double c_0 = 1e-4;
 

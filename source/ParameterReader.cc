@@ -42,7 +42,9 @@ void ParameterReader::declare_parameters()
         
         prm.declare_entry("Permeability multiplier flag", "false", Patterns::Bool());
         
-        prm.declare_entry("Penalization parameter", "1000", Patterns::Double(0));
+        prm.declare_entry("Penalization parameter", "10000", Patterns::Double(0));
+        
+        prm.declare_entry("Interface penalization parameter", "1000", Patterns::Double(0));
     }
     prm.leave_subsection();
 

@@ -40,5 +40,7 @@ void BiotSystem::set_control_parameters()
     }
     gamma_penal = prm.get_double("Penalization parameter");
     cout << "gamma_penal = " << gamma_penal << endl;
+    gamma_interface = prm.get_double("Interface penalization parameter");
+    cout << "gamma_interface = " << gamma_interface << endl;
     prm.leave_subsection();
 }
