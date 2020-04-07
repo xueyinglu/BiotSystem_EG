@@ -58,7 +58,7 @@ void BiotSystem::assemble_system_pressure_eg()
 
     double penalty_term = gamma_penal / min_cell_diameter;
     double d_Big_K = 1;
-    double eps = 0;
+    double eps = 1e-5;
 
     vector<double> permeability_values(n_q_points);
     vector<Vector<double>> prev_timestep_sol_pressure_values(n_q_points, Vector<double>(2));
