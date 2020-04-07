@@ -141,7 +141,7 @@ void BiotSystem::plot_error() const
         }
         else
         {
-            ofstream output_u("visual/" + filename_base + "-ada-eg-u-" + std::to_string(timestep) + ".vtk");
+            ofstream output_u("visual/" + filename_base + "-eg-u-" + std::to_string(timestep) + ".vtk");
             data_out_u.write_vtk(output_u);
         }
     }
