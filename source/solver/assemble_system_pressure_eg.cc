@@ -319,15 +319,15 @@ void BiotSystem::assemble_system_pressure_eg()
                                 if (test_case == TestCase::heterogeneous)
                                 {
                                     d_Big_K = perm_function.value(fe_subface_values.quadrature_point(q) - eps * fe_subface_values.normal_vector(q), 0) / mu_f;
-                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q) - eps* fe_face_values_neighbor.normal_vector(q), 0) / mu_f;
+                                    d_Big_K_neighbor = perm_function.value(fe_face_values_neighbor.quadrature_point(q) - eps * fe_face_values_neighbor.normal_vector(q), 0) / mu_f;
                                 }
                                 // ADDED harmonic averaging of perm in the penalty term
                                 double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                                 double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
-                                // if (beta_e != 0.5)
-                                // {
-                                //     gamma_penal = 1.0;
-                                // }
+                                if (beta_e != 0.5)
+                                {
+                                    gamma_penal = 1.0;
+                                }
                                 penalty_term = gamma_penal / h_e;
                                 for (unsigned int k = 0; k < dofs_per_cell; ++k)
                                 {
@@ -404,13 +404,13 @@ void BiotSystem::assemble_system_pressure_eg()
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
-                            //if (beta_e != 0.5)
-                            //{
+                            if (beta_e != 0.5)
+                            {
                                 // cout << "d_Big_K = " << d_Big_K << endl;
                                 // cout << "d_Big_K_neighbor = " << d_Big_K_neighbor << endl;
                                 // cout << "beta_e = " << beta_e << endl;
-                            //    gamma_penal = 1.0;
-                            // }
+                                gamma_penal = 1.0;
+                            }
                             penalty_term = gamma_penal / h_e;
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
 
@@ -501,10 +501,10 @@ void BiotSystem::assemble_system_pressure_eg()
                             }
                             double K_e = 2.0 * d_Big_K * d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
                             double beta_e = d_Big_K_neighbor / (d_Big_K + d_Big_K_neighbor);
-                            // if (beta_e != 0.5)
-                            // {
-                            //     gamma_penal = 1.0;
-                            // }
+                            if (beta_e != 0.5)
+                            {
+                                gamma_penal = 1.0;
+                            }
                             penalty_term = gamma_penal / h_e;
                             for (unsigned int k = 0; k < dofs_per_cell; ++k)
                             {
