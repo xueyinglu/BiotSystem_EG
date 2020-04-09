@@ -167,7 +167,7 @@ void BiotSystem::assemble_system_pressure_eg()
                     {
                         cell_rhs(i) +=
                             (fe_value.shape_value(i, q) * // phi_i(x_q)
-                             -20 *                        // f(x_q)
+                             -10 *                        // f(x_q)
                              fe_value.JxW(q));            // dx
                     }
                 }
