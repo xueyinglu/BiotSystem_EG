@@ -429,6 +429,8 @@ void BiotSystem::calc_a_posteriori_indicators_u()
     }
     eta_u_n.push_back(eta_E_u);
 
+    eta_u_equilibrium.push_back(sqrt(eta_E_u));
+
     u_indicators_table.add_value("time", t);
     u_indicators_table.add_value("eta_face_partial_sigma", eta_face_partial_sigma.back());
     u_indicators_table.add_value("eta_face_sigma", eta_face_sigma.back());

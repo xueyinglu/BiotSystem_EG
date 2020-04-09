@@ -124,15 +124,15 @@ void BiotSystem::calc_error()
     convergence_table.add_value("1/h", 1. / h);
     convergence_table.add_value("L2_p", sqrt(biot_inv_M)*L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
-    double energy_norm; 
+    vector<double> u_energy;
     if (test_case == TestCase::benchmark|| test_case == TestCase::mandel)
     {
-        energy_norm= calc_u_energy_norm();
-        energy_norm = sqrt(energy_norm);
+        u_energy= calc_u_energy_norm();
     }
 
-    convergence_table.add_value("energy_u", energy_norm);
+    convergence_table.add_value("energy_u", u_energy[0]);
     l2_error_p.push_back(L2_p_EG);
     l2_error_u.push_back(L2_norm_displacement);
-    energy_error_u.push_back(energy_norm);
+    energy_error_u.push_back(u_energy[0]);
+    energy_error_u_1.push_back(u_energy[1]);
 }

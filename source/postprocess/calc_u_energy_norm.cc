@@ -5,7 +5,7 @@
 #include "MandelDisplacement.h"
 using namespace std;
 
-double BiotSystem::calc_u_energy_norm()
+vector<double> BiotSystem::calc_u_energy_norm()
 {
 
     QGauss<dim> quadrature_displacement(fe_displacement.degree + 2);
@@ -23,7 +23,9 @@ double BiotSystem::calc_u_energy_norm()
     vector<double> lambda_values(n_q_points);
     vector<double> mu_values(n_q_points);
 
-    double u_energy_norm_square = 0;
+    double u_energy_norm = 0;
+    double l2_strain = 0;
+    double h_div_u = 0;
     for (; cell != endc; ++cell)
     {
         fe_value_displacement.reinit(cell);
@@ -43,8 +45,15 @@ double BiotSystem::calc_u_energy_norm()
             Tensor<2, dim> grad_u = Tensors::get_grad_u<dim>(q, grad_u_values);
             Tensor<2, dim> e_strain = 0.5 * ((grad_u - true_grad) + transpose(grad_u - true_grad));
             double e_div = Tensors::get_divergence_u(grad_u - true_grad);
-            u_energy_norm_square += (mu_values[q] / 2 * e_strain.norm_square() + lambda_values[q] / 4 * e_div * e_div) * fe_value_displacement.JxW(q);
+            l2_strain += 4 * mu_values[q] * mu_values[q] * e_strain.norm_square() * fe_value_displacement.JxW(q);
+            h_div_u += lambda_values[q] * lambda_values[q] * e_div * e_div * fe_value_displacement.JxW(q);
+            u_energy_norm += (2 * mu_values[q] * e_strain.norm_square() + lambda_values[q] * e_div * e_div) * fe_value_displacement.JxW(q);
         }
     }
-    return u_energy_norm_square;
+    u_energy_norm = sqrt(u_energy_norm);
+    double energy_u_1 = sqrt(l2_strain) + sqrt(h_div_u);
+    vector<double> energy_u;
+    energy_u.push_back(u_energy_norm);
+    energy_u.push_back(energy_u_1);
+    return energy_u;
 }

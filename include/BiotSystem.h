@@ -80,12 +80,6 @@ private:
     std::vector<IndexSet> partition_relevant_displacement;
     IndexSet relevant_set_displacement;
     */
-    ConvergenceTable convergence_table;
-    vector<double> l2_error_p;
-    vector<double> l2_error_u;
-    vector<double> energy_error_u;
-    vector<double> h_error_p_sq;
-    vector<int> num_fs;
 
     // Data
     bool b_p_mult; //flag for permeability multiplier
@@ -115,6 +109,12 @@ private:
     bool bCG_WeaklyBD = true;
     double d_SForm = 0; //SIPG
 
+    vector<double> l2_error_p;
+    vector<double> l2_error_u;
+    vector<double> energy_error_u; // sqrt(2G|| e ||^2 + lambda ||u ||_{H_div}^2)
+    vector<double> energy_error_u_1; // 2G|| e || + lambda ||u||_{H_div} 
+    vector<double> h_error_p_sq;
+    vector<int> num_fs;
     /* element-wise a posteriori error indicators*/
     DoFHandler<dim> dof_handler_output;
     FESystem<dim> fe_output;
@@ -149,6 +149,11 @@ private:
     vector<double> eta_u_n; // the errors on the displacement at time t_n; 
     vector<double> eta_u; // the errors on the displacement at final time
     vector<double> eta_sum; // the sum of all error indicators
+    
+    // for checking the lower bound
+    vector<double> eta_u_equilibrium;
+
+    ConvergenceTable convergence_table;
     ConvergenceTable p_indicators_table;
     ConvergenceTable u_indicators_table;
     ConvergenceTable efficiency_table;
@@ -184,7 +189,7 @@ private:
     void calc_a_posteriori_indicators_p_eg();
     void calc_a_posteriori_indicators_u();
 
-    double calc_u_energy_norm();
+    vector<double> calc_u_energy_norm();
     void calc_p_h_norm();
     void calc_efficiency_indices();
 
