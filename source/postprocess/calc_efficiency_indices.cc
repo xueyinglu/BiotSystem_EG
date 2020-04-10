@@ -21,16 +21,22 @@ void BiotSystem::calc_efficiency_indices()
     efficiency_table.add_value("sqrt_eta_sum", sqrt(eta_sum.back()));
     efficiency_table.add_value("error", sqrt(error_sq));
     efficiency_table.add_value("index", I_eff);
+    efficiency_table.add_value("eta_u_eq", eta_u_equilibrium.back());
+    efficiency_table.add_value("error1", energy_error_u_1.back() + biot_alpha * l2_error_p.back());
     efficiency_table.add_value("lower_bound", lower_bound);
 
     efficiency_table.set_precision("error", 4);
     efficiency_table.set_precision("index", 4);
     efficiency_table.set_precision("sqrt_eta_sum", 4);
+    efficiency_table.set_precision("eta_u_eq", 4);
+    efficiency_table.set_precision("error1", 4);
     efficiency_table.set_precision("lowe_bound", 4);
     efficiency_table.set_scientific("time", true);
     efficiency_table.set_scientific("error", true);
     efficiency_table.set_scientific("index", true);
     efficiency_table.set_scientific("sqrt_eta_sum", true);
+    efficiency_table.set_scientific("eta_u_eq", true);
+    efficiency_table.set_scientific("error1", true);
     efficiency_table.set_scientific("lower_bound", true);
     efficiency_table.set_tex_table_caption("Efficiency Index: $h = 1/(2^" + to_string(num_global_refinement) + "), \\Delta t = " + to_string(del_t) + "$");
     ofstream efficiency_table_file(filename_base + "-efficiency-" + to_string(num_global_refinement) + "-" + to_string(del_t) + ".tex");
