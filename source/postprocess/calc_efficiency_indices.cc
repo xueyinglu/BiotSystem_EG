@@ -45,10 +45,10 @@ void BiotSystem::calc_efficiency_indices()
     efficiency_table.set_scientific("time", true);
     efficiency_table.set_scientific("eta_flow", true);
     efficiency_table.set_scientific("error1", true);
-    efficiency_table.set_scientific("index1", true);
+    // efficiency_table.set_scientific("index1", true);
     efficiency_table.set_scientific("eta_mechanics", true);
     efficiency_table.set_scientific("error2", true);
-    efficiency_table.set_scientific("index2", true);
+    // efficiency_table.set_scientific("index2", true);
     efficiency_table.set_scientific("eta_u_eq", true);
     efficiency_table.set_scientific("lower_bound", true);
 
