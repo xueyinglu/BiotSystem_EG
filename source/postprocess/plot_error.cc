@@ -113,7 +113,6 @@ void BiotSystem::plot_error() const
 
     if (test_case == TestCase::terzaghi){
         DataOut<dim> data_out_u;
-        cout << "line 116" << endl;
         data_out_u.attach_dof_handler(dof_handler_displacement);
         vector<string> u_names;
         u_names.push_back("u_x");
