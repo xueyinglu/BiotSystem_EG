@@ -1,8 +1,9 @@
-#include "TerzaghiPressure.h"
+#include "TerzaghiPressureEG.h"
 using namespace std;
 
-double TerzaghiPressure::value(const Point<dim> &p, const unsigned int component) const
+void TerzaghiPressureEG::vector_value(const Point<dim> &p, Vector<double> &values) const
 {
+    values[1] = 0;
     double pressure = 0;
 
     double y = p(1);
@@ -18,5 +19,5 @@ double TerzaghiPressure::value(const Point<dim> &p, const unsigned int component
     {
         pressure = 0;
     }
-    return pressure;
+    values[0] = pressure;
 }

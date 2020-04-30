@@ -1,14 +1,15 @@
-#ifndef TERZAGHI_PRESSURE_H_
-#define TERZAGHI_PRESSURE_H_
+#ifndef TERZAGHI_PRESSURE_EG_H_
+#define TERZAGHI_PRESSURE_EG_H_
+// Mandel pressure solution that has a second component valued 0, in order to be used with EG pressure solution
 #include "DealiiHeader.h"
 using namespace std;
 using namespace dealii;
-class TerzaghiPressure : public Function<dim>
+
+class TerzaghiPressureEG : public Function<dim>
 {
 public:
-    TerzaghiPressure(double _t) : Function<dim>(1) { t = _t; };
-
-    virtual double value(const Point<dim> &p, const unsigned int component) const;
+    TerzaghiPressureEG(double _t) : Function<dim>(2) { t = _t; };
+    virtual void vector_value(const Point<dim> &p, Vector<double> &values) const;
 
 private:
     double t;
@@ -30,4 +31,5 @@ private:
 
     double PI = atan(1) * 4;
 };
+
 #endif
