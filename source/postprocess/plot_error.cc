@@ -59,6 +59,18 @@ void BiotSystem::plot_error() const
         
         ofstream output_exact("visual/" + filename_base + "-exact-p-" + std::to_string(timestep) + ".vtk");
         data_out_exact.write_vtk(output_exact);
+        DataOut<dim> data_out;
+        data_out.attach_dof_handler(dof_handler_pressure);
+        vector<string> sol_names;
+        sol_names.push_back("P_CG");
+        sol_names.push_back("P_DG");
+        data_out.add_data_vector(solution_pressure, sol_names);
+        data_out.build_patches();
+        ofstream output("visual/" + filename_base + "-eg-p-" + std::to_string(timestep) + ".vtk");
+        data_out.write_vtk(output);
+    }
+
+    if (test_case == TestCase::benchmark || test_case == TestCase::mandel){
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
         if (test_case == TestCase::benchmark)
@@ -79,15 +91,6 @@ void BiotSystem::plot_error() const
         {
             error_u[i] = std::abs(error_u[i]);
         }
-        DataOut<dim> data_out;
-        data_out.attach_dof_handler(dof_handler_pressure);
-        vector<string> sol_names;
-        sol_names.push_back("P_CG");
-        sol_names.push_back("P_DG");
-        data_out.add_data_vector(solution_pressure, sol_names);
-        data_out.build_patches();
-        ofstream output("visual/" + filename_base + "-eg-p-" + std::to_string(timestep) + ".vtk");
-        data_out.write_vtk(output);
 
         DataOut<dim> data_out_u;
         data_out_u.attach_dof_handler(dof_handler_displacement);
@@ -108,7 +111,21 @@ void BiotSystem::plot_error() const
         data_out_u.write_vtk(output_u);
     }
 
-    else if (test_case == TestCase::heterogeneous)
+    if (test_case == TestCase::terzaghi){
+        DataOut<dim> data_out_u;
+        cout << "line 116" << endl;
+        data_out_u.attach_dof_handler(dof_handler_displacement);
+        vector<string> u_names;
+        u_names.push_back("u_x");
+        u_names.push_back("u_y");
+        data_out_u.add_data_vector(solution_displacement, u_names);
+        data_out_u.build_patches();
+        ofstream output_u("visual/" + filename_base + "-eg-u-" + std::to_string(timestep) + ".vtk");
+        data_out_u.write_vtk(output_u);
+
+    }
+
+    if (test_case == TestCase::heterogeneous)
     {
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler_pressure);

@@ -28,8 +28,9 @@ void BiotSystem::calc_error()
             fe_values_pressure.reinit(cell);
 
             //exact_pressure_gradient.vector_value_list(fe_values_pressure.get_quadrature_points(), exact_pressure_grads);
-            if (test_case== TestCase::benchmark){
-            exact_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
+            if (test_case == TestCase::benchmark)
+            {
+                exact_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
             }
             else if (test_case == TestCase::mandel)
             {
@@ -120,19 +121,19 @@ void BiotSystem::calc_error()
     }
     */
 
+    l2_error_p.push_back(L2_p_EG);
+
     convergence_table.add_value("time", t);
     convergence_table.add_value("1/h", 1. / h);
-    convergence_table.add_value("L2_p", sqrt(biot_inv_M)*L2_p_EG);
+    convergence_table.add_value("L2_p", sqrt(biot_inv_M) * L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
     vector<double> u_energy;
-    if (test_case == TestCase::benchmark|| test_case == TestCase::mandel)
+    if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
     {
-        u_energy= calc_u_energy_norm();
+        u_energy = calc_u_energy_norm();
+        l2_error_u.push_back(L2_norm_displacement);
+        energy_error_u.push_back(u_energy[0]);
+        energy_error_u_1.push_back(u_energy[1]);
+        convergence_table.add_value("energy_u", u_energy[0]);
     }
-
-    convergence_table.add_value("energy_u", u_energy[0]);
-    l2_error_p.push_back(L2_p_EG);
-    l2_error_u.push_back(L2_norm_displacement);
-    energy_error_u.push_back(u_energy[0]);
-    energy_error_u_1.push_back(u_energy[1]);
 }
