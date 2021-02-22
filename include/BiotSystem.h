@@ -90,7 +90,7 @@ private:
     PermFunction perm_function;
     LambdaFunction lambda_function;
     MuFunction mu_function;
-    double pressure_dirichlet_bc;
+    double pressure_dirichlet_bc = 0;
     double initial_pressure_value;
     Tensor<1,dim> traction_bc;
     TestCase test_case= benchmark;
