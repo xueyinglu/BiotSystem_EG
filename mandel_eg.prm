@@ -6,13 +6,14 @@ subsection Global parameters
   set Final time                        = 1
   set Timestep size			= 1e-3
   set Fixed-stress criteria             = 2
-  set Fixed-stress tolerance            = 1e-4
+  set Fixed-stress tolerance            = 1e-6
   set Output filename	    	        = mandel
   set Output frequency                  = 5
   set Test case                         = mandel
   set Adaptivity flag                   = false
   set Permeability multiplier flag      = false
-  set Penalization parameter            = 1000
+  set Penalization parameter            = 1
+
 
 # Add here to read-in the grid
 end
