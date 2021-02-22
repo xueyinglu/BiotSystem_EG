@@ -25,6 +25,7 @@ public:
     enum TestCase{
         none, 
         benchmark,
+        benchmark_natural,
         mandel,
         terzaghi,
         heterogeneous

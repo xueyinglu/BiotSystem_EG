@@ -29,7 +29,7 @@ void BiotSystem::plot_error() const
         error[i] = std::abs(error[i]);
     }
     */
-    if (test_case == benchmark || test_case == terzaghi || test_case == TestCase::mandel)
+    if (test_case == benchmark || test_case == TestCase::benchmark_natural || test_case == terzaghi || test_case == TestCase::mandel)
     {
         DataOut<dim> data_out_exact;
         data_out_exact.attach_dof_handler(dof_handler_output);
@@ -70,10 +70,10 @@ void BiotSystem::plot_error() const
         data_out.write_vtk(output);
     }
 
-    if (test_case == TestCase::benchmark || test_case == TestCase::mandel){
+    if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural || test_case == TestCase::mandel){
         Vector<double> interpolated_exact_sol_u(dof_handler_displacement.n_dofs());
         Vector<double> error_u(dof_handler_displacement.n_dofs());
-        if (test_case == TestCase::benchmark)
+        if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural)
         {
             VectorTools::interpolate(dof_handler_displacement,
                                      DisplacementSolution(t),

@@ -1,5 +1,6 @@
 #include "BiotSystem.h"
 #include "AuxTools.h"
+#include "PressureSolution.h"
 using namespace std;
 void BiotSystem::assemble_system_pressure_eg()
 {
@@ -59,6 +60,8 @@ void BiotSystem::assemble_system_pressure_eg()
     double penalty_term = gamma_penal / min_cell_diameter;
     double d_Big_K = 1;
     double eps = 1e-5;
+
+    PressureSolution exact_p(t);
 
     vector<double> permeability_values(n_q_points);
     vector<Vector<double>> prev_timestep_sol_pressure_values(n_q_points, Vector<double>(2));
@@ -196,7 +199,7 @@ void BiotSystem::assemble_system_pressure_eg()
                 {
                     // Weakly impose Dirichlet BC where the boundary indicator is 0
                     if (
-                        ((test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous) && cell->face(face_no)->boundary_id() == 2) || (test_case == TestCase::mandel && cell->face(face_no)->boundary_id() == 1) || (test_case == TestCase::benchmark))
+                        ((test_case == TestCase::terzaghi || test_case == TestCase::heterogeneous) && cell->face(face_no)->boundary_id() == 2) || (test_case == TestCase::mandel && cell->face(face_no)->boundary_id() == 1) || (test_case == TestCase::benchmark) || (test_case == TestCase::benchmark_natural && cell->face(face_no)->boundary_id() == 1) )
                     {
                         // cout << "weakly impose pressure dirichlet bc" << endl;
                         fe_face_values.reinit(cell, face_no);
@@ -275,7 +278,38 @@ void BiotSystem::assemble_system_pressure_eg()
                             }
                         } //for q
                     }
-                } // cell - at_boundary
+                    if ( (test_case == TestCase::benchmark_natural) && (cell->face(face_no)->boundary_id() != 1)) // Neaumann BC in Benchmark problem
+                    {
+                        fe_face_values.reinit(cell, face_no);
+
+                        double h_e = cell->face(face_no)->diameter();
+                        penalty_term = gamma_penal / h_e;
+                        for (unsigned int q = 0; q < n_face_q_points; ++q)
+                        {
+                            for (unsigned int k = 0; k < dofs_per_cell; ++k)
+                            {
+
+                                phi_i_p_face[k] = fe_face_values[pressure_dg].value(k, q);
+                                phi_i_grads_p_face[k] = fe_face_values[pressure_dg].gradient(k, q);
+
+                                phi_i_p_face_cg[k] = fe_face_values[pressure_cg].value(k, q);
+                                phi_i_grads_p_face_cg[k] = fe_face_values[pressure_cg].gradient(k, q);
+
+                                
+                            }
+                            Tensor<1,dim> neumann_value;
+                            exact_p.gradient_value(fe_face_values.quadrature_point(q), neumann_value);
+                            for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                            {
+                                cell_rhs(i) -= -d_Big_K * neumann_value * fe_face_values.normal_vector(q) * fe_face_values[pressure_dg].value(i, q) * fe_face_values.JxW(q);
+                                    //I-N-2
+                                cell_rhs(i) -= -d_Big_K * neumann_value * fe_face_values.normal_vector(q) * fe_face_values[pressure_cg].value(i, q) * fe_face_values.JxW(q);
+                            }
+
+                        }
+                    }
+                }
+                
                 // On the Interface
                 else
                 {

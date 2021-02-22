@@ -28,7 +28,7 @@ void BiotSystem::calc_error()
             fe_values_pressure.reinit(cell);
 
             //exact_pressure_gradient.vector_value_list(fe_values_pressure.get_quadrature_points(), exact_pressure_grads);
-            if (test_case == TestCase::benchmark)
+            if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural)
             {
                 exact_p.value_list(fe_values_pressure.get_quadrature_points(), exact_p_values);
             }
@@ -71,7 +71,7 @@ void BiotSystem::calc_error()
     /* Calculate the L2 norm of displacement solution */
 
     Vector<float> difference_per_cell_displacement(triangulation.n_active_cells());
-    if (test_case == TestCase::benchmark)
+    if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural)
     {
 
         VectorTools::integrate_difference(dof_handler_displacement,
@@ -128,7 +128,7 @@ void BiotSystem::calc_error()
     convergence_table.add_value("L2_p", sqrt(biot_inv_M) * L2_p_EG);
     convergence_table.add_value("L2_u", L2_norm_displacement);
     vector<double> u_energy;
-    if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
+    if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural || test_case == TestCase::mandel)
     {
         u_energy = calc_u_energy_norm();
         l2_error_u.push_back(L2_norm_displacement);

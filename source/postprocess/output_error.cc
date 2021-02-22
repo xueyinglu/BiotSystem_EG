@@ -7,7 +7,7 @@ void BiotSystem::output_error()
     convergence_table.set_precision("L2_p", 4);
     convergence_table.set_scientific("L2_p", true);
     convergence_table.set_tex_caption("L2_p", "L^2-error p");
-    if (test_case == TestCase::benchmark || test_case == TestCase::mandel)
+    if (test_case == TestCase::benchmark || test_case == TestCase::benchmark_natural || test_case == TestCase::mandel)
     {
         convergence_table.set_precision("L2_u", 4);
         convergence_table.set_precision("energy_u", 4);
