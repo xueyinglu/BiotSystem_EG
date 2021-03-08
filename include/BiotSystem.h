@@ -28,7 +28,8 @@ public:
         benchmark_natural,
         mandel,
         terzaghi,
-        heterogeneous
+        heterogeneous,
+        L_shape
     };
 
 

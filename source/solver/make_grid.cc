@@ -36,4 +36,12 @@ void BiotSystem::make_grid()
         triangulation.refine_global(num_global_refinement);
         std::cout << "Number of active cells:" << triangulation.n_active_cells() << std::endl;
     }
+
+    else if (test_case == TestCase::L_shape)
+    {
+        cout << "---------------L-shape: Making grid----------------"<<endl;
+        GridGenerator::hyper_L(triangulation);
+        triangulation.refine_global(num_global_refinement);
+        std::cout << "Number of active cells:" << triangulation.n_active_cells() << std::endl;
+    }
 }
